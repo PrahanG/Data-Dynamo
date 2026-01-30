@@ -6,20 +6,39 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useOptimizationStore } from "@/store/optimization-store"
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  Activity, 
-  Zap, 
-  AlertTriangle, 
+import {
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  Zap,
+  AlertTriangle,
   CheckCircle,
   TrendingUp,
   Shuffle
 } from "lucide-react"
 
-export function StatusPanel() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<Array<{ 
+interface StatusPanelProps {
+  minimized?: boolean
+  onToggle?: () => void
+  className?: string
+}
+
+export function StatusPanel({ minimized = false, onToggle, className = "" }: StatusPanelProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  // Map props to internal concept. Original was 'isOpen' used for expanding content.
+  // If sidebar mode: 'minimized' means we show icon. 'maximized' means we show content.
+  // But original StatusPanel had a chevron to toggle content even while visible?
+  // Let's assume on sidebar:
+  // Minimized = Icon only.
+  // Maximized = Full Panel (which might be collapsible internally too? No, let's force it open).
+
+  // We will use 'isOpen' to mean "Show full content".
+  // If controlled (onToggle exists): isOpen = !minimized.
+  // If uncontrolled: isOpen = internalOpen.
+  const isOpen = onToggle ? !minimized : internalOpen
+  const handleToggle = onToggle || (() => setInternalOpen(prev => !prev))
+
+  const [messages, setMessages] = useState<Array<{
     id: string
     text: string
     type: 'info' | 'warning' | 'success' | 'error'
@@ -27,16 +46,16 @@ export function StatusPanel() {
   }>>([])
   const [currentState, setCurrentState] = useState('S₀')
   const [transitionCount, setTransitionCount] = useState(0)
-  
-  const { 
-    boxes, 
-    physicsEnabled, 
-    isSimulationRunning, 
-    stabilityScore, 
+
+  const {
+    boxes,
+    physicsEnabled,
+    isSimulationRunning,
+    stabilityScore,
     safetyScore,
-    physicsStats 
+    physicsStats
   } = useOptimizationStore()
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messageIdRef = useRef(0)
 
@@ -69,7 +88,7 @@ export function StatusPanel() {
     if (physicsStats?.collisions && physicsStats.collisions > 0) {
       addMessage(`Collision detected! Count: ${physicsStats.collisions}`, 'error')
     }
-    
+
     if (physicsStats?.contacts && physicsStats.contacts > 5) {
       addMessage(`Multiple contact forces: ${physicsStats.contacts}`, 'info')
     }
@@ -83,17 +102,17 @@ export function StatusPanel() {
         setCurrentState(newStateId)
         setTransitionCount(prev => prev + 1)
         addMessage(`State transition: ${currentState} → ${newStateId}`, 'info')
-        
+
         // Simulate box placement feedback
         const latestBox = boxes[boxes.length - 1]
         if (latestBox) {
           addMessage(`Box #${latestBox.id} placed at position (${latestBox.position.x.toFixed(1)}, ${latestBox.position.y.toFixed(1)}, ${latestBox.position.z.toFixed(1)})`, 'success')
-          
+
           // Check for risky placements
           if (latestBox.position.y > 3.0) {
             addMessage(`Warning: Box #${latestBox.id} placed at risky height`, 'warning')
           }
-          
+
           // MCTS-specific feedback
           if (boxes.length <= 15) {
             addMessage(`MCTS node explored - evaluating placement quality`, 'info')
@@ -110,7 +129,7 @@ export function StatusPanel() {
       type,
       timestamp: Date.now()
     }
-    
+
     setMessages(prev => {
       const updated = [...prev, newMessage]
       // Keep only last 50 messages
@@ -157,156 +176,167 @@ export function StatusPanel() {
   }
 
   return (
-    <div 
-      className="fixed bottom-4 right-4 z-50 w-96 max-w-[90vw]"
-      style={{ 
-        position: 'fixed',
-        bottom: '1rem',
-        right: '1rem',
+    <div
+      className={`${className} ${!className.includes('absolute') && !className.includes('fixed') ? 'fixed bottom-4 left-4' : ''} z-50 transition-all duration-300 ${isOpen ? 'w-96' : 'w-auto'}`}
+      style={{
         zIndex: 50,
         maxHeight: '70vh'
       }}
     >
-      <Card className="bg-gray-900/95 border-gray-700 shadow-2xl backdrop-blur-sm">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm text-white flex items-center">
-              <TrendingUp className="h-4 w-4 mr-2 text-cyan-400" />
-              Physics Status Panel
-            </CardTitle>
-            <Button
-              onClick={() => setIsOpen(!isOpen)}
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-gray-400 hover:text-white"
-            >
-              {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-            </Button>
-          </div>
-        </CardHeader>
-        
-        {isOpen && (
-          <CardContent className="space-y-3 max-h-80 overflow-hidden">
-            {/* Current State Display */}
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2">
-                <Shuffle className="h-3 w-3 text-purple-400" />
-                <span className="text-gray-300">Current State:</span>
-                <Badge variant="outline" className="text-purple-400 border-purple-400">
-                  {currentState}
-                </Badge>
-              </div>
-              <span className="text-gray-500">Transitions: {transitionCount}</span>
-            </div>
-
-            {/* Physics Stats */}
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <div className="text-center">
-                <div className="text-gray-400">Stability</div>
-                <div className={`font-bold ${stabilityScore > 80 ? 'text-green-400' : stabilityScore > 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-                  {stabilityScore.toFixed(1)}%
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-gray-400">Collisions</div>
-                <div className="font-bold text-white">{physicsStats?.collisions || 0}</div>
-              </div>
-              <div className="text-center">
-                <div className="text-gray-400">Contacts</div>
-                <div className="font-bold text-white">{physicsStats?.contacts || 0}</div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex space-x-1">
+      {!isOpen ? (
+        <button
+          onClick={handleToggle}
+          className="bg-gray-900/90 text-white p-3 rounded-lg border border-gray-600 shadow-xl hover:bg-gray-800 transition-colors flex items-center gap-2"
+          title="Show Physics Status"
+        >
+          <span className="text-xl">📈</span>
+          <span className="font-semibold text-sm hidden md:block">Physics</span>
+        </button>
+      ) : (
+        <Card className="bg-gray-900/95 border-gray-700 shadow-2xl backdrop-blur-sm h-full flex flex-col">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm text-white flex items-center">
+                <TrendingUp className="h-4 w-4 mr-2 text-cyan-400" />
+                Physics Status Panel
+              </CardTitle>
               <Button
-                onClick={() => simulateForceEvent('brake')}
-                variant="outline"
+                onClick={handleToggle}
+                variant="ghost"
                 size="sm"
-                className="flex-1 h-6 text-xs"
+                className="h-6 w-6 p-0 text-gray-400 hover:text-white"
               >
-                Test Brake
-              </Button>
-              <Button
-                onClick={() => simulateForceEvent('turn')}
-                variant="outline"
-                size="sm"
-                className="flex-1 h-6 text-xs"
-              >
-                Test Turn
-              </Button>
-              <Button
-                onClick={() => simulateForceEvent('accel')}
-                variant="outline"
-                size="sm"
-                className="flex-1 h-6 text-xs"
-              >
-                Test Accel
+                <ChevronDown className="h-4 w-4" />
               </Button>
             </div>
+          </CardHeader>
 
-            {/* Messages */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">Live Feedback</span>
-                <Button
-                  onClick={clearMessages}
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 text-xs text-gray-500 hover:text-white p-1"
-                >
-                  Clear
-                </Button>
-              </div>
-              
-              <div className="max-h-32 overflow-y-auto space-y-1 bg-gray-950/50 rounded p-2">
-                {messages.length === 0 ? (
-                  <div className="text-xs text-gray-500 text-center py-2">
-                    No messages yet...
+          {/* Helper Wrapper to ensure content renders always when maximized */}
+          <div className="flex-1 overflow-hidden">
+            {true && (
+              <CardContent className="space-y-3 max-h-80 overflow-hidden">
+                {/* Current State Display */}
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    <Shuffle className="h-3 w-3 text-purple-400" />
+                    <span className="text-gray-300">Current State:</span>
+                    <Badge variant="outline" className="text-purple-400 border-purple-400">
+                      {currentState}
+                    </Badge>
                   </div>
-                ) : (
-                  messages.slice(-10).map((message) => (
-                    <div key={message.id} className="flex items-start space-x-2 text-xs">
-                      {getMessageIcon(message.type)}
-                      <div className="flex-1">
-                        <span className="text-gray-300">{message.text}</span>
-                        <div className="text-gray-500 text-xs">
-                          {new Date(message.timestamp).toLocaleTimeString()}
-                        </div>
-                      </div>
-                      <Badge 
-                        variant={getMessageBadgeVariant(message.type)} 
-                        className="h-4 text-xs px-1"
-                      >
-                        {message.type}
-                      </Badge>
-                    </div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
+                  <span className="text-gray-500">Transitions: {transitionCount}</span>
+                </div>
 
-            {/* Simulation Status */}
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-400">Engine Status:</span>
-              <div className="flex items-center space-x-1">
-                {isSimulationRunning ? (
-                  <>
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-green-400">Active</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                    <span className="text-gray-500">Idle</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
+                {/* Physics Stats */}
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="text-center">
+                    <div className="text-gray-400">Stability</div>
+                    <div className={`font-bold ${stabilityScore > 80 ? 'text-green-400' : stabilityScore > 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {stabilityScore.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-400">Collisions</div>
+                    <div className="font-bold text-white">{physicsStats?.collisions || 0}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-400">Contacts</div>
+                    <div className="font-bold text-white">{physicsStats?.contacts || 0}</div>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex space-x-1">
+                  <Button
+                    onClick={() => simulateForceEvent('brake')}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-6 text-xs"
+                  >
+                    Test Brake
+                  </Button>
+                  <Button
+                    onClick={() => simulateForceEvent('turn')}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-6 text-xs"
+                  >
+                    Test Turn
+                  </Button>
+                  <Button
+                    onClick={() => simulateForceEvent('accel')}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-6 text-xs"
+                  >
+                    Test Accel
+                  </Button>
+                </div>
+
+                {/* Messages */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Live Feedback</span>
+                    <Button
+                      onClick={clearMessages}
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 text-xs text-gray-500 hover:text-white p-1"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+
+                  <div className="max-h-32 overflow-y-auto space-y-1 bg-gray-950/50 rounded p-2">
+                    {messages.length === 0 ? (
+                      <div className="text-xs text-gray-500 text-center py-2">
+                        No messages yet...
+                      </div>
+                    ) : (
+                      messages.slice(-10).map((message) => (
+                        <div key={message.id} className="flex items-start space-x-2 text-xs">
+                          {getMessageIcon(message.type)}
+                          <div className="flex-1">
+                            <span className="text-gray-300">{message.text}</span>
+                            <div className="text-gray-500 text-xs">
+                              {new Date(message.timestamp).toLocaleTimeString()}
+                            </div>
+                          </div>
+                          <Badge
+                            variant={getMessageBadgeVariant(message.type)}
+                            className="h-4 text-xs px-1"
+                          >
+                            {message.type}
+                          </Badge>
+                        </div>
+                      ))
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </div>
+
+                {/* Simulation Status */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-400">Engine Status:</span>
+                  <div className="flex items-center space-x-1">
+                    {isSimulationRunning ? (
+                      <>
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="text-green-400">Active</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                        <span className="text-gray-500">Idle</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

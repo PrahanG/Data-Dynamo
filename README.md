@@ -1,6 +1,6 @@
-# PackPilot
+# CargoVision
 
-PackPilot is a 3D box-placement optimizer for truck loading. It finds safe, efficient, and delivery-aware packings under real-world constraints:
+CargoVision is a 3D box-placement optimizer for truck loading. It finds safe, efficient, and delivery-aware packings under real-world constraints:
 
 - **Safety & Stability:** center-of-gravity, base support ratio, tilt margins
 - **Damage Avoidance:** fragility & stackability, max load on top, orientation locks

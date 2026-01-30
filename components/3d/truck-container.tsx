@@ -75,9 +75,7 @@ export function TruckContainer({ dimensions }: TruckContainerProps) {
             <bufferGeometry>
               <bufferAttribute
                 attach="attributes-position"
-                count={2}
-                array={new Float32Array([-width / 2 + i, 0.01, -length / 2, -width / 2 + i, 0.01, length / 2])}
-                itemSize={3}
+                args={[new Float32Array([-width / 2 + i, 0.01, -length / 2, -width / 2 + i, 0.01, length / 2]), 3]}
               />
             </bufferGeometry>
             <lineBasicMaterial color="#444444" opacity={0.3} transparent />
@@ -88,9 +86,7 @@ export function TruckContainer({ dimensions }: TruckContainerProps) {
             <bufferGeometry>
               <bufferAttribute
                 attach="attributes-position"
-                count={2}
-                array={new Float32Array([-width / 2, 0.01, -length / 2 + i, width / 2, 0.01, -length / 2 + i])}
-                itemSize={3}
+                args={[new Float32Array([-width / 2, 0.01, -length / 2 + i, width / 2, 0.01, -length / 2 + i]), 3]}
               />
             </bufferGeometry>
             <lineBasicMaterial color="#444444" opacity={0.3} transparent />

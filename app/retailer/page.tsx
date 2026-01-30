@@ -80,6 +80,45 @@ export default function InventoryDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
 
+  const [items, setItems] = useState<Item[]>(availableItems)
+
+  // Sync with delivered orders to update stock
+  const fetchInventoryUpdates = async () => {
+    try {
+      const res = await fetch('/api/orders')
+      if (!res.ok) return
+      const orders: any[] = await res.json()
+
+      // Calculate delivered quantities per product
+      const deliveredMap = new Map<string, number>()
+      orders.forEach(order => {
+        if (order.status === 'delivered') {
+          const prodId = order.productId.toString()
+          deliveredMap.set(prodId, (deliveredMap.get(prodId) || 0) + order.quantity)
+        }
+      })
+
+      setItems(prevItems => {
+        return availableItems.map(item => {
+          const deliveredQty = deliveredMap.get(item.id) || 0
+          return {
+            ...item,
+            currentStock: item.currentStock + deliveredQty
+          }
+        })
+      })
+    } catch (e) {
+      console.error("Failed to fetch inventory updates", e)
+    }
+  }
+
+  // Poll for updates every 5 seconds
+  useEffect(() => {
+    fetchInventoryUpdates()
+    const interval = setInterval(fetchInventoryUpdates, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
   useEffect(() => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
@@ -89,7 +128,8 @@ export default function InventoryDashboard() {
     threeDays.setDate(threeDays.getDate() + 3)
     setCustomDeadline(threeDays.toISOString().split("T")[0])
 
-    const shortages = availableItems
+    // Use 'items' state instead of 'availableItems' constant
+    const shortages = items
       .filter((item) => item.currentStock <= item.minStock)
       .map((item) => {
         const shortage = item.minStock - item.currentStock
@@ -126,6 +166,7 @@ export default function InventoryDashboard() {
           minStock: item.minStock,
           maxStock: item.maxStock || item.minStock * 2,
           leadTime: item.leadTime || 2,
+          supplierReliability: item.supplierReliability || 100,
           suggestedQuantity,
           urgency,
           image: item.image,
@@ -136,9 +177,12 @@ export default function InventoryDashboard() {
       })
 
     setShortageItems(shortages)
-    const criticalItems = new Set(shortages.filter(item => item.urgency === "critical").map(item => item.id))
-    setSelectedShortageItems(criticalItems)
-  }, [orderingStrategy])
+    // Only select critical items if they haven't been manually deselected? 
+    // Simplified: keep preserving selection if possible, or just re-select criticals on load
+    // For now we re-calc criticals. 
+    // const criticalItems = new Set(shortages.filter(item => item.urgency === "critical").map(item => item.id))
+    // setSelectedShortageItems(criticalItems)
+  }, [orderingStrategy, items])
 
   const addToOrder = (item: Item) => {
     setOrderItems((prev) => {
@@ -198,13 +242,47 @@ export default function InventoryDashboard() {
       }, 0)
   }
 
-  const sendRequest = () => {
+  const sendRequest = async () => {
     if (orderItems.length === 0) return
-    alert("Request sent to warehouse successfully!")
-    setOrderItems([])
+
+    try {
+      const ordersPayload = orderItems.map(item => ({
+        retailId: 105, // Using a numeric ID for compatibility with existing mock data type
+        productId: parseInt(item.id) || 999,
+        quantity: item.quantity,
+        deliveryDate: deadline,
+        status: "pending",
+        totalWeight: item.quantity * 0.5, // Approx weight
+        priority: "normal",
+        retail: {
+          name: retailInfo.name,
+          location: "Downtown" // Hardcoded for now
+        },
+        product: {
+          name: item.name,
+          sku: `SKU-${item.id}`
+        }
+      }))
+
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ordersPayload)
+      })
+
+      if (response.ok) {
+        alert("Request sent to warehouse successfully!")
+        setOrderItems([])
+      } else {
+        throw new Error('Failed to send orders')
+      }
+    } catch (error) {
+      console.error(error)
+      alert("Failed to submit orders. Please try again.")
+    }
   }
 
-  const sendSelectedShortageOrders = () => {
+  const sendSelectedShortageOrders = async () => {
     if (selectedShortageItems.size === 0) {
       alert("Please select items to order.")
       return
@@ -214,28 +292,57 @@ export default function InventoryDashboard() {
       alert(`Order total ($${totalCost.toFixed(2)}) exceeds budget limit ($${budgetLimit.toFixed(2)}). Please adjust quantities or budget.`)
       return
     }
-    alert(`Selected shortage orders sent successfully! Total: $${totalCost.toFixed(2)}`)
-    setShowShortagePopup(false)
-    setShowTopAlert(false)
-    setSelectedShortageItems(new Set())
+
+    try {
+      const itemsToOrder = shortageItems.filter(item => selectedShortageItems.has(item.id))
+      const ordersPayload = itemsToOrder.map(item => ({
+        retailId: 105,
+        productId: parseInt(item.id) || 999,
+        quantity: item.customQuantity ?? item.suggestedQuantity,
+        deliveryDate: customDeadline,
+        status: "pending",
+        priority: item.priority,
+        totalWeight: (item.customQuantity ?? item.suggestedQuantity) * 0.5,
+        retail: { name: retailInfo.name, location: "Downtown" },
+        product: { name: item.name, sku: `SKU-${item.id}` }
+      }))
+
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ordersPayload)
+      })
+
+      if (response.ok) {
+        alert(`Selected shortage orders sent successfully! Total: $${totalCost.toFixed(2)}`)
+        setShowShortagePopup(false)
+        setShowTopAlert(false)
+        setSelectedShortageItems(new Set())
+      } else {
+        throw new Error('Failed to send shortage orders')
+      }
+    } catch (error) {
+      console.error(error)
+      alert("Failed to send orders.")
+    }
   }
 
   // Filter items based on search and category
-  const filteredItems = availableItems.filter(item => {
+  const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.category.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = selectedCategory === "all" || item.category === selectedCategory
     return matchesSearch && matchesCategory
   })
 
-  const categories = ["all", ...Array.from(new Set(availableItems.map(item => item.category)))]
+  const categories = ["all", ...Array.from(new Set(items.map(item => item.category)))]
   const totalAmount = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const criticalShortages = shortageItems.filter((item) => item.urgency === "critical")
   const shortageOrderTotal = calculateShortageOrderTotal()
   const selectedCount = selectedShortageItems.size
-  const totalItems = availableItems.length
-  const lowStockItems = availableItems.filter(item => item.currentStock <= item.minStock).length
-  const outOfStockItems = availableItems.filter(item => !item.inStock).length
+  const totalItems = items.length
+  const lowStockItems = items.filter(item => item.currentStock <= item.minStock).length
+  const outOfStockItems = items.filter(item => item.currentStock === 0).length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -938,7 +1045,7 @@ export default function InventoryDashboard() {
                       <Checkbox
                         id="cashflow"
                         checked={cashFlowMode}
-                        onCheckedChange={setCashFlowMode}
+                        onCheckedChange={(checked) => setCashFlowMode(checked === true)}
                       />
                       <Label htmlFor="cashflow" className="text-gray-900">Enable budget limit</Label>
                     </div>

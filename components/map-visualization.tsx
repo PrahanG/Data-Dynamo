@@ -24,20 +24,19 @@ import {
   Truck,
 } from "lucide-react"
 
-// Real Walmart Distribution Center as warehouse origin
 const warehouseLocation = {
   id: "warehouse",
-  name: "Walmart Distribution Center #6094",
+  name: "CargoVision Hub #6094",
   address: "24555 Katy Freeway, Katy, TX 77494",
   coordinates: { lat: 29.7604, lng: -95.689 },
   type: "warehouse" as const,
 }
 
-// Real Walmart store locations in Texas/Southwest region for realistic routing
+// Sample store locations in Texas/Southwest region for realistic routing
 const walmartStorePool = [
   {
-    id: "walmart_1",
-    name: "Walmart Supercenter #5260",
+    id: "store_1",
+    name: "Retail Store #5260",
     address: "2425 East Pioneer Parkway, Arlington, TX 76010",
     coordinates: { lat: 32.7074, lng: -97.0682 },
     placeId: "ChIJhRMHnlWZToYRqHKFOjAKXA8",
@@ -142,13 +141,18 @@ type GoogleMapsMarker = any
 type GoogleMapsInfoWindow = any
 type GoogleMapsPolyline = any // Added for drawing the moving object's path
 
-export default function MapVisualization() {
+interface MapVisualizationProps {
+  onLocationSelect?: (location: { name: string; address: string; lat: number; lng: number }) => void;
+}
+
+export default function MapVisualization({ onLocationSelect }: MapVisualizationProps = {}) {
   // Map and Google APIs references
   const mapRef = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<GoogleMap | null>(null)
   const [directionsService, setDirectionsService] = useState<GoogleMapsService | null>(null)
   const [directionsRenderer, setDirectionsRenderer] = useState<GoogleMapsService | null>(null)
   const [placesService, setPlacesService] = useState<GoogleMapsService | null>(null)
+  const [geocoder, setGeocoder] = useState<any | null>(null) // Geocoder state
   const [trafficLayer, setTrafficLayer] = useState<any | null>(null)
 
   // UI state management
@@ -251,7 +255,7 @@ export default function MapVisualization() {
 
       // Create and inject Google Maps script
       const script = document.createElement("script")
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=initGoogleMaps`
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry,geocoding&callback=initGoogleMaps`
       script.async = true
       script.defer = true
       script.onerror = () => {
@@ -405,17 +409,26 @@ export default function MapVisualization() {
       // Initialize Places service for search functionality
       const placesServiceInstance = new window.google.maps.places.PlacesService(mapInstance)
 
+      // Initialize Geocoder
+      const geocoderInstance = new window.google.maps.Geocoder()
+
       // Initialize traffic layer (but don't add to map yet)
       const trafficLayerInstance = new window.google.maps.TrafficLayer()
       if (trafficLayerEnabled) {
         trafficLayerInstance.setMap(mapInstance)
       }
 
+      // Add click listener for adding stops
+      mapInstance.addListener("click", (e: any) => {
+        handleMapClick(e.latLng, geocoderInstance)
+      })
+
       // Set state
       setMap(mapInstance)
       setDirectionsService(directionsServiceInstance)
       setDirectionsRenderer(directionsRendererInstance)
       setPlacesService(placesServiceInstance)
+      setGeocoder(geocoderInstance)
       setTrafficLayer(trafficLayerInstance)
       setIsLoaded(true)
       setIsLoading(false)
@@ -847,7 +860,13 @@ export default function MapVisualization() {
             etaToFirstStop: etaToFirstStop, // Set ETA here
           })
         } else {
-          throw new Error(`Directions request failed: ${status}`)
+          console.error(`Directions request failed: ${status}`)
+          setError({
+            type: "routing",
+            message: "Route Calculation Failed",
+            details: `Google Maps API Error: ${status}. Please check if 'Directions API' is enabled in your Google Cloud Console.`,
+          })
+          setIsCalculatingRoute(false)
         }
       })
     } catch (error) {
@@ -920,43 +939,52 @@ export default function MapVisualization() {
       if (!map || !place.geometry?.location) return
 
       try {
-        const customIcon = {
-          url:
-            "data:image/svg+xml;charset=UTF-8," +
-            encodeURIComponent(`
-          <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="16" cy="16" r="14" fill="#10b981" stroke="#059669" strokeWidth="2"/>
-            <path d="M16 8l3 6h5l-4 3 1.5 6-5.5-4-5.5 4L12 17l-4-3h5l3-6z" fill="white"/>
-          </svg>
-        `),
-          scaledSize: new window.google.maps.Size(32, 32),
-          anchor: new window.google.maps.Point(16, 16),
+        // Create new location object matching the WalmartLocation interface
+        const newLocation: WalmartLocation = {
+          id: place.place_id || `custom_${Date.now()}`,
+          name: place.name || "Custom Location",
+          address: place.formatted_address || "Unknown Address",
+          coordinates: {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          },
+          placeId: place.place_id,
+          priority: selectedStores.length + 1
         }
 
-        const marker = new window.google.maps.Marker({
-          position: place.geometry.location,
-          map: map,
-          icon: customIcon,
-          title: place.name,
-        })
+        // Add to selected stores list for routing
+        const updatedStores = [...selectedStores, newLocation]
+        setSelectedStores(updatedStores)
 
-        const infoWindow = new window.google.maps.InfoWindow({
-          content: `
-          <div style="color: #1f2937; padding: 8px; min-width: 200px;">
-            <h4 style="margin: 0 0 8px 0; color: #10b981; font-weight: bold;">📍 Custom Location</h4>
-            <p style="margin: 0; font-size: 14px;">${place.formatted_address || place.name}</p>
-          </div>
-        `,
-        })
+        // Update visual markers
+        addStoreMarkers(updatedStores)
 
-        marker.addListener("click", () => {
-          infoWindow.open(map, marker)
-        })
-
+        // Center map on the new location
         map.setCenter(place.geometry.location)
-        map.setZoom(14)
+        map.setZoom(12)
+
+        // Clear search UI
         setSearchResults([])
         setSearchQuery("")
+
+        // Indicate that route needs recalculation
+        setRouteInfo(null)
+        if (directionsRenderer) {
+          // Clear the existing line to match the cleared info state
+          // calling setDirections with null clears the map in the JS API
+          directionsRenderer.setDirections(null as any)
+        }
+
+        // Trigger callback if provided (for picker mode)
+        if (onLocationSelect) {
+          onLocationSelect({
+            name: newLocation.name,
+            address: newLocation.address,
+            lat: newLocation.coordinates.lat,
+            lng: newLocation.coordinates.lng
+          });
+        }
+
       } catch (error) {
         console.error("Error adding custom location:", error)
         setError({
@@ -966,7 +994,7 @@ export default function MapVisualization() {
         })
       }
     },
-    [map],
+    [map, selectedStores, addStoreMarkers, directionsRenderer],
   )
 
   /**
@@ -988,6 +1016,32 @@ export default function MapVisualization() {
   }, [trafficLayer, map])
 
   const clearError = () => setError(null)
+
+  /**
+   * Handle map click to add a new stop via Reverse Geocoding
+   */
+  const handleMapClick = useCallback((latLng: any, geocoderInstance: any) => {
+    if (!geocoderInstance) return
+
+    geocoderInstance.geocode({ location: latLng }, (results: any[], status: any) => {
+      if (status === "OK" && results[0]) {
+        const place = results[0]
+
+        // Use existing add logic but adapt for the different result format if needed
+        // The structure from geocoder is very similar to Places API
+        addCustomLocation(place)
+      } else {
+        // Fallback if no address found
+        const fallbackPlace = {
+          place_id: `coord_${Date.now()}`,
+          name: "Dropped Pin",
+          formatted_address: `${latLng.lat().toFixed(4)}, ${latLng.lng().toFixed(4)}`,
+          geometry: { location: latLng }
+        }
+        addCustomLocation(fallbackPlace)
+      }
+    })
+  }, [addCustomLocation])
 
   // Effect to manage visibility of the moving object
   useEffect(() => {
@@ -1045,7 +1099,7 @@ export default function MapVisualization() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center text-primary">
               <Navigation className="h-5 w-5 mr-2" />
-              Walmart Route Optimizer
+              CargoVision Route Planner
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

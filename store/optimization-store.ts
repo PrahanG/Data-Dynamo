@@ -3,7 +3,7 @@
 
 import { create } from "zustand"
 import type { Box } from "@/types/box"
-import { sampleBoxes } from "@/data/sample-boxes"
+import { sampleBoxes, generateDynamicSampleBoxes } from "@/data/sample-boxes"
 
 // Define interfaces for better type safety
 interface PhysicsStats {
@@ -54,6 +54,12 @@ interface OptimizationState {
   simulationSpeed: number
   simulationForces: SimulationForces
 
+  // Search / Focus
+  focusedBoxId: string | null
+  setFocusedBoxId: (id: string | null) => void
+  isIsolationMode: boolean
+  setIsIsolationMode: (isIsolationMode: boolean) => void
+
   // Scores
   stabilityScore: number
   safetyScore: number
@@ -62,6 +68,8 @@ interface OptimizationState {
   // Loading
   loadingSequence: Box[]
   currentLoadStep: number
+
+
 
   // Temperature Zones
   temperatureZones: {
@@ -99,6 +107,10 @@ interface OptimizationState {
 }
 
 export const useOptimizationStore = create<OptimizationState>((set, get) => ({
+  focusedBoxId: null,
+  setFocusedBoxId: (id) => set({ focusedBoxId: id }),
+  isIsolationMode: false,
+  setIsIsolationMode: (isIsolationMode) => set({ isIsolationMode }),
   boxes: [],
   unplaceableBoxes: [],
   truckDimensions: {
@@ -128,8 +140,11 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
   },
 
   loadSampleData: () => {
+    // Generate fresh random data instead of using static sample
+    const freshBoxes = generateDynamicSampleBoxes();
+
     //@ts-ignore
-    const { placedBoxes, unplacedBoxes } = optimizeBoxPlacement(sampleBoxes, get().truckDimensions)
+    const { placedBoxes, unplacedBoxes } = optimizeBoxPlacement(freshBoxes, get().truckDimensions)
     const scores = calculateAllScores(placedBoxes, get().truckDimensions)
     const sequence = generateOptimalLoadingSequence(placedBoxes)
     const zones = categorizeTemperatureZones(placedBoxes)
@@ -260,9 +275,9 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
     // Reset to optimized positions
     const state = get()
     //@ts-ignore
-    const optimizedBoxes = optimizeBoxPlacement(state.boxes, state.truckDimensions)
+    const result = optimizeBoxPlacement(state.boxes, state.truckDimensions)
     //@ts-ignore
-    set({ boxes: optimizedBoxes })
+    set({ boxes: result.placedBoxes })
 
     // Recalculate scores after reset
     setTimeout(() => {

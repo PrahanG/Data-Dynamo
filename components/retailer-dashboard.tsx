@@ -15,6 +15,7 @@ interface ShortageAlert {
     sku: string
   }
   shop: {
+    id: string
     name: string
   }
   severity: string
@@ -214,8 +215,8 @@ export default function RetailerDashboard() {
                           <Badge variant={getSeverityColor(alert.severity)}>
                             {alert.severity}
                           </Badge>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             onClick={() => createOrderFromAlert(alert)}
                           >
                             Create Order
@@ -248,7 +249,7 @@ export default function RetailerDashboard() {
                 <div key={order.id} className="flex items-center justify-between p-3 border rounded">
                   <div>
                     <div className="font-medium">
-                      {order.sourceAlert?.item.name || 'Manual Order'} 
+                      {order.sourceAlert?.item.name || 'Manual Order'}
                       <span className="text-muted-foreground ml-2">
                         (Qty: {order.totalQuantity})
                       </span>

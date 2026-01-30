@@ -79,7 +79,7 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      const response = await fetch("http://localhost:3001/api/orders")
+      const response = await fetch("/api/orders")
       if (!response.ok) {
         throw new Error("Failed to fetch orders")
       }
@@ -386,9 +386,8 @@ export default function OrdersPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all ${
-                  showFilters ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
+                className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all ${showFilters ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
               >
                 <Filter className="h-4 w-4" />
                 Filters
@@ -422,9 +421,8 @@ export default function OrdersPage() {
                       <button
                         key={status}
                         onClick={() => setFilter(status)}
-                        className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                          filter === status ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                        }`}
+                        className={`px-4 py-2 rounded-lg text-sm transition-all ${filter === status ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                          }`}
                       >
                         {status === "all" ? "All" : status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                       </button>
@@ -439,11 +437,10 @@ export default function OrdersPage() {
                       <button
                         key={priority}
                         onClick={() => setPriorityFilter(priority)}
-                        className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                          priorityFilter === priority
+                        className={`px-4 py-2 rounded-lg text-sm transition-all ${priorityFilter === priority
                             ? "bg-blue-600 text-white"
                             : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                        }`}
+                          }`}
                       >
                         {priority.charAt(0).toUpperCase() + priority.slice(1)}
                       </button>
@@ -575,9 +572,8 @@ export default function OrdersPage() {
                   return (
                     <tr
                       key={order.id}
-                      className={`hover:bg-gray-700/50 transition-all duration-200 ${
-                        selectedOrders.includes(order.id) ? "bg-blue-900/20" : ""
-                      }`}
+                      className={`hover:bg-gray-700/50 transition-all duration-200 ${selectedOrders.includes(order.id) ? "bg-blue-900/20" : ""
+                        }`}
                     >
                       <td className="px-6 py-4">
                         <input

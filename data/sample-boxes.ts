@@ -1,7 +1,7 @@
 /**
- * Enhanced Sample Data for PackPilot Demo
+ * Enhanced Sample Data for CargoVision Demo
  * @description 200 random boxes for testing truck loading optimization
- * @author PackPilot Team
+ * @author CargoVision Team
  * @version 2.4
  */
 
@@ -10,7 +10,7 @@ import type { Box } from "@/types/box";
 // Demo destination mapping for realistic scenarios
 export const DEMO_DESTINATIONS = {
   walmart: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"],
-  electronics: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"], 
+  electronics: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"],
   grocery: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"],
   general: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"]
 };
@@ -24,7 +24,7 @@ const getRandomDestination = () => {
 export const sampleBoxes: Box[] = Array.from({ length: 200 }, (_, i) => {
   const temperatureZones = ["regular", "cold", "frozen"] as const;
   const tempZone = temperatureZones[Math.floor(Math.random() * temperatureZones.length)];
-  
+
   // Realistic weight distribution (most boxes 10-100 lbs, some heavy items)
   let weight: number;
   if (Math.random() < 0.7) {
@@ -34,7 +34,7 @@ export const sampleBoxes: Box[] = Array.from({ length: 200 }, (_, i) => {
   } else {
     weight = 200 + Math.random() * 300; // 10% are 200-500 lbs (heavy items)
   }
-  
+
   // Fragility based on weight and temperature zone
   let isFragile: boolean;
   if (tempZone === "frozen") {
@@ -44,10 +44,10 @@ export const sampleBoxes: Box[] = Array.from({ length: 200 }, (_, i) => {
   } else {
     isFragile = Math.random() < 0.25; // Light items more likely fragile
   }
-  
+
   // Realistic dimensions based on weight
   let width: number, height: number, length: number;
-  
+
   if (weight < 20) {
     // Small, light items (electronics, small packages)
     width = 0.5 + Math.random() * 1.5; // 0.5-2.0 ft
@@ -64,12 +64,12 @@ export const sampleBoxes: Box[] = Array.from({ length: 200 }, (_, i) => {
     height = 1.5 + Math.random() * 2.5; // 1.5-4.0 ft
     length = 2.0 + Math.random() * 6.0; // 2.0-8.0 ft
   }
-  
+
   // Ensure boxes fit within truck constraints
   width = Math.min(width, 7.5); // Max truck width minus margin
   height = Math.min(height, 8.5); // Max truck height minus margin
   length = Math.min(length, 27.5); // Max truck length minus margin
-  
+
   return {
     id: `box-${String(i + 1).padStart(3, "0")}`,
     name: `Sample Box ${i + 1}`,
@@ -174,10 +174,10 @@ export function validateBoxData(box: Partial<Box>): string[] {
 // Function to generate dynamic sample boxes based on current routes
 export function generateDynamicSampleBoxes(routeNames: string[] = ["Stop 1", "Stop 2", "Stop 3", "Stop 4"], count: number = 200): Box[] {
   const temperatureZones = ["regular", "cold", "frozen"] as const;
-  
+
   return Array.from({ length: count }, (_, i) => {
     const tempZone = temperatureZones[Math.floor(Math.random() * temperatureZones.length)];
-    
+
     // Realistic weight distribution
     let weight: number;
     if (Math.random() < 0.7) {
@@ -187,7 +187,7 @@ export function generateDynamicSampleBoxes(routeNames: string[] = ["Stop 1", "St
     } else {
       weight = 200 + Math.random() * 300; // 10% are 200-500 lbs
     }
-    
+
     // Fragility based on weight and temperature
     let isFragile: boolean;
     if (tempZone === "frozen") {
@@ -197,10 +197,10 @@ export function generateDynamicSampleBoxes(routeNames: string[] = ["Stop 1", "St
     } else {
       isFragile = Math.random() < 0.25;
     }
-    
+
     // Realistic dimensions based on weight
     let width: number, height: number, length: number;
-    
+
     if (weight < 20) {
       width = 0.5 + Math.random() * 1.5;
       height = 0.3 + Math.random() * 1.2;
@@ -214,12 +214,12 @@ export function generateDynamicSampleBoxes(routeNames: string[] = ["Stop 1", "St
       height = 1.5 + Math.random() * 2.5;
       length = 2.0 + Math.random() * 6.0;
     }
-    
+
     // Ensure boxes fit within truck constraints
     width = Math.min(width, 7.5);
     height = Math.min(height, 8.5);
     length = Math.min(length, 27.5);
-    
+
     return {
       id: `box-${String(i + 1).padStart(3, "0")}`,
       name: `Sample Box ${i + 1}`,
@@ -242,7 +242,7 @@ export function updateBoxDestinations(boxes: Box[], newDestinations: string[]): 
   if (newDestinations.length === 0) {
     return boxes;
   }
-  
+
   return boxes.map(box => ({
     ...box,
     destination: newDestinations[Math.floor(Math.random() * newDestinations.length)]

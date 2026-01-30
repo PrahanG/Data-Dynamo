@@ -14,6 +14,7 @@ export interface Box {
   isFragile: boolean
   destination: string
   isNew?: boolean
+  isRotated?: boolean
   crushFactor?: number // 0-1, resistance to crushing
   stackLimit?: number // Maximum number of boxes that can be stacked on top
 }

@@ -1,9 +1,9 @@
-// Ultra-Modern Walmart 3D Truck-Loading PDF Report Generator - FIXED VERSION (Pie Chart Re-implemented)
+// CargoVision 3D Truck-Loading PDF Report Generator - FIXED VERSION (Pie Chart Re-implemented)
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 
 // Initialize pdfMake with proper font handling
-(pdfMake as any).vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
+(pdfMake as any).vfs = (pdfFonts as any).pdfMake ? (pdfFonts as any).pdfMake.vfs : pdfFonts;
 
 // Enhanced font system with multiple professional fonts
 (pdfMake as any).fonts = {
@@ -27,8 +27,8 @@ const COLORS = {
   medium: '#6B7280',        // Medium gray
   light: '#F9FAFB',         // Very light gray
   white: '#FFFFFF',
-  walmart: '#0071CE',       // Walmart blue
-  walmartYellow: '#FFC220', // Walmart yellow
+  cargovision: '#0071CE',       // CargoVision brand blue
+  cargovisionYellow: '#FFC220', // Brand yellow accent
   gradientStart: '#3B82F6', // Blue gradient start
   gradientEnd: '#1E40AF',   // Blue gradient end
   shadow: '#00000015',      // Subtle shadow
@@ -58,7 +58,7 @@ const STYLES = {
     margin: [0, 0, 0, 8],
     font: 'Roboto'
   },
- 
+
   reportSubtitle: {
     fontSize: 14,
     color: COLORS.white,
@@ -66,7 +66,7 @@ const STYLES = {
     margin: [0, 0, 0, 0],
     opacity: 0.9
   },
- 
+
   // Modern section headers with enhanced visual hierarchy
   sectionHeader: {
     fontSize: 20,
@@ -78,7 +78,7 @@ const STYLES = {
     decorationColor: COLORS.accent,
     font: 'Roboto'
   },
- 
+
   subsectionHeader: {
     fontSize: 16,
     bold: true,
@@ -86,19 +86,19 @@ const STYLES = {
     margin: [0, 20, 0, 10],
     font: 'Roboto'
   },
- 
+
   // Enhanced card containers with shadows
   cardContainer: {
     fillColor: COLORS.white,
     margin: [0, 8, 0, 16]
   },
- 
+
   // Professional metric cards
   metricCard: {
     fillColor: COLORS.white,
     margin: [8, 8, 8, 8]
   },
- 
+
   // Enhanced table styling
   tableHeader: {
     bold: true,
@@ -108,38 +108,38 @@ const STYLES = {
     alignment: 'center',
     margin: [8, 10, 8, 10]
   },
- 
+
   tableCell: {
     fontSize: 10,
     color: COLORS.dark,
     margin: [8, 8, 8, 8]
   },
- 
+
   // Status indicators
   statusSuccess: {
     color: COLORS.success,
     bold: true,
     fontSize: 11
   },
- 
+
   statusWarning: {
     color: COLORS.warning,
     bold: true,
     fontSize: 11
   },
- 
+
   statusError: {
     color: COLORS.error,
     bold: true,
     fontSize: 11
   },
- 
+
   // Accent elements
   accent: {
     color: COLORS.accent,
     bold: true
   },
- 
+
   highlight: {
     color: COLORS.primary,
     bold: true,
@@ -152,7 +152,7 @@ function createHeaderDesign() {
   return {
     canvas: [
       // Primary gradient background
-      { type: 'rect', x: 0, y: 0, w: 595, h: 130, color: COLORS.walmart, fillOpacity: 1 },
+      { type: 'rect', x: 0, y: 0, w: 595, h: 130, color: COLORS.cargovision, fillOpacity: 1 },
       // FIXED: Secondary overlay without linearGradient
       { type: 'rect', x: 0, y: 0, w: 595, h: 130, color: COLORS.gradientStart, fillOpacity: 0.15 },
       // Sophisticated wave pattern
@@ -162,7 +162,7 @@ function createHeaderDesign() {
           { x: 0, y: 105 }, { x: 100, y: 95 }, { x: 200, y: 110 }, { x: 300, y: 100 },
           { x: 400, y: 115 }, { x: 500, y: 105 }, { x: 595, y: 95 }, { x: 595, y: 130 }, { x: 0, y: 130 }
         ],
-        color: COLORS.walmartYellow,
+        color: COLORS.cargovisionYellow,
         fillOpacity: 0.9
       },
       // Modern geometric accents
@@ -193,13 +193,13 @@ function createMetricCard(label: string, value: string, color: string = COLORS.p
     table: {
       body: [
         [{
-            stack: [
-              // Icon and canvas elements have been removed as per the request.
-              { text: value, fontSize: 26, bold: true, color: color, alignment: 'center', margin: [0, 8, 0, 4], font: 'Roboto' },
-              { text: label, fontSize: 10, color: COLORS.medium, alignment: 'center', margin: [0, 0, 0, 4] },
-              trend ? { text: trend, fontSize: 8, color: COLORS.success, alignment: 'center', italics: true } : null
-            ].filter(Boolean),
-            border: [false, false, false, false]
+          stack: [
+            // Icon and canvas elements have been removed as per the request.
+            { text: value, fontSize: 26, bold: true, color: color, alignment: 'center', margin: [0, 8, 0, 4], font: 'Roboto' },
+            { text: label, fontSize: 10, color: COLORS.medium, alignment: 'center', margin: [0, 0, 0, 4] },
+            trend ? { text: trend, fontSize: 8, color: COLORS.success, alignment: 'center', italics: true } : null
+          ].filter(Boolean),
+          border: [false, false, false, false]
         }]
       ]
     },
@@ -216,7 +216,8 @@ function createModernTable(headers: string[], data: any[], title?: string, highl
   data.forEach(row => {
     const rowData = headers.map((header, colIndex) => ({
       text: row[header] || '', fontSize: 10, color: COLORS.dark, margin: [0, 0, 0, 0],
-      bold: colIndex === highlightColumn ? true : false, fillColor: colIndex === highlightColumn ? '#F0FDF4' : undefined
+      bold: colIndex === highlightColumn ? true : false, fillColor: colIndex === highlightColumn ? '#F0FDF4' : COLORS.white,
+      style: 'tableCell'
     }));
     tableBody.push(rowData);
   });
@@ -244,92 +245,92 @@ function createModernTable(headers: string[], data: any[], title?: string, highl
 
 // Bar chart with fixed 0-100 Y-axis and "Store X" labels on X-axis.
 function createDestinationBarChart(reportData: any) {
-    const uniqueDestinations = [...new Set(reportData.boxes.map((b: any) => b.destination || "Unknown"))];
-    const destinationCounts = uniqueDestinations.map(dest => ({
-        name: String(dest).substring(0, 15),
-        count: reportData.boxes.filter((b: any) => (b.destination || "Unknown") === dest).length
-    }));
+  const uniqueDestinations = [...new Set(reportData.boxes.map((b: any) => b.destination || "Unknown"))];
+  const destinationCounts = uniqueDestinations.map(dest => ({
+    name: String(dest).substring(0, 15),
+    count: reportData.boxes.filter((b: any) => (b.destination || "Unknown") === dest).length
+  }));
 
-    if (destinationCounts.length === 0) {
-        return { canvas: [], width: 520, height: 240 };
-    }
+  if (destinationCounts.length === 0) {
+    return { canvas: [], width: 520, height: 240 };
+  }
 
-    const chartWidth = 520, chartHeight = 240;
-    const margin = { top: 30, right: 30, bottom: 50, left: 50 };
-    const graphWidth = chartWidth - margin.left - margin.right;
-    const graphHeight = chartHeight - margin.top - margin.bottom;
+  const chartWidth = 520, chartHeight = 240;
+  const margin = { top: 30, right: 30, bottom: 50, left: 50 };
+  const graphWidth = chartWidth - margin.left - margin.right;
+  const graphHeight = chartHeight - margin.top - margin.bottom;
 
-    // Set a fixed Y-axis scale from 0-100 with intervals of 10.
-    const yAxisMax = 100;
-    const numYTicks = 10; // 10 ticks for 11 labels (0, 10, ..., 100)
+  // Set a fixed Y-axis scale from 0-100 with intervals of 10.
+  const yAxisMax = 100;
+  const numYTicks = 10; // 10 ticks for 11 labels (0, 10, ..., 100)
 
-    const canvas: any[] = [
-        // Chart background
-        { type: 'rect', x: 0, y: 0, w: chartWidth, h: chartHeight, color: COLORS.light, fillOpacity: 0.3 },
-    ];
+  const canvas: any[] = [
+    // Chart background
+    { type: 'rect', x: 0, y: 0, w: chartWidth, h: chartHeight, color: COLORS.light, fillOpacity: 0.3 },
+  ];
 
-    // Y-axis labels and grid lines
-    for (let i = 0; i <= numYTicks; i++) {
-        const tickValue = Math.round((yAxisMax / numYTicks) * i);
-        const yPos = margin.top + graphHeight - (tickValue / yAxisMax) * graphHeight;
-       
-        // Grid line
-        canvas.push({ type: 'line', x1: margin.left, y1: yPos, x2: margin.left + graphWidth, y2: yPos, lineWidth: 0.5, lineColor: COLORS.border });
-       
-        // Y-axis label
-        canvas.push({
-            text: tickValue.toString(),
-            x: margin.left - 8,
-            y: yPos - 4, // Adjust for vertical alignment
-            style: 'small',
-            color: COLORS.medium,
-            alignment: 'right'
-        });
-    }
+  // Y-axis labels and grid lines
+  for (let i = 0; i <= numYTicks; i++) {
+    const tickValue = Math.round((yAxisMax / numYTicks) * i);
+    const yPos = margin.top + graphHeight - (tickValue / yAxisMax) * graphHeight;
 
-    // Axes lines
-    canvas.push({ type: 'line', x1: margin.left, y1: margin.top, x2: margin.left, y2: margin.top + graphHeight, lineWidth: 1.5, lineColor: COLORS.dark }); // Y-axis
-    canvas.push({ type: 'line', x1: margin.left, y1: margin.top + graphHeight, x2: margin.left + graphWidth, y2: margin.top + graphHeight, lineWidth: 1.5, lineColor: COLORS.dark }); // X-axis
+    // Grid line
+    canvas.push({ type: 'line', x1: margin.left, y1: yPos, x2: margin.left + graphWidth, y2: yPos, lineWidth: 0.5, lineColor: COLORS.border });
 
-    const barTotalWidth = graphWidth / destinationCounts.length;
-    const barWidth = barTotalWidth * 0.7;
-    const barSpacing = barTotalWidth * 0.3;
-
-    // Bars and X-axis labels
-    destinationCounts.forEach((dest, index) => {
-        // Cap the bar height at the maximum graph height
-        const barHeight = Math.min(graphHeight, (dest.count / yAxisMax) * graphHeight);
-        if (barHeight <= 0) return; // Don't draw zero-height bars
-
-        const x = margin.left + (index * barTotalWidth) + (barSpacing / 2);
-        const y = margin.top + graphHeight - barHeight;
-        const barColor = [COLORS.primary, COLORS.accent, COLORS.success, COLORS.warning][index % 4];
-
-        // Bar shadow
-        canvas.push({ type: 'rect', x: x + 2, y: y + 2, w: barWidth, h: barHeight, color: COLORS.shadow, fillOpacity: 0.3 });
-        // Main bar
-        canvas.push({ type: 'rect', x: x, y: y, w: barWidth, h: barHeight, color: barColor, fillOpacity: 0.9 });
-        // Bar highlight
-        canvas.push({ type: 'rect', x: x, y: y, w: barWidth, h: Math.min(barHeight, 8), color: COLORS.white, fillOpacity: 0.3 });
-
-        // Use "Store X" for the X-axis label
-        canvas.push({
-            text: `Store ${index + 1}`,
-            x: x + barWidth / 2,
-            y: margin.top + graphHeight + 6,
-            style: 'small',
-            bold: true,
-            color: COLORS.dark,
-            alignment: 'center'
-        });
+    // Y-axis label
+    canvas.push({
+      text: tickValue.toString(),
+      x: margin.left - 8,
+      y: yPos - 4, // Adjust for vertical alignment
+      style: 'small',
+      color: COLORS.medium,
+      alignment: 'right'
     });
-   
-    // Axis Titles
-    canvas.push({ text: 'Number of Boxes', x: 15, y: chartHeight / 2, style: 'caption', bold: true, alignment: 'center'});
-    // Update X-axis title
-    canvas.push({ text: 'Store Stop', x: chartWidth / 2, y: chartHeight - 15, style: 'caption', bold: true, alignment: 'center'});
+  }
 
-    return { canvas, width: chartWidth, height: chartHeight };
+  // Axes lines
+  canvas.push({ type: 'line', x1: margin.left, y1: margin.top, x2: margin.left, y2: margin.top + graphHeight, lineWidth: 1.5, lineColor: COLORS.dark }); // Y-axis
+  canvas.push({ type: 'line', x1: margin.left, y1: margin.top + graphHeight, x2: margin.left + graphWidth, y2: margin.top + graphHeight, lineWidth: 1.5, lineColor: COLORS.dark }); // X-axis
+
+  const barTotalWidth = graphWidth / destinationCounts.length;
+  const barWidth = barTotalWidth * 0.7;
+  const barSpacing = barTotalWidth * 0.3;
+
+  // Bars and X-axis labels
+  destinationCounts.forEach((dest, index) => {
+    // Cap the bar height at the maximum graph height
+    const barHeight = Math.min(graphHeight, (dest.count / yAxisMax) * graphHeight);
+    if (barHeight <= 0) return; // Don't draw zero-height bars
+
+    const x = margin.left + (index * barTotalWidth) + (barSpacing / 2);
+    const y = margin.top + graphHeight - barHeight;
+    const barColor = [COLORS.primary, COLORS.accent, COLORS.success, COLORS.warning][index % 4];
+
+    // Bar shadow
+    canvas.push({ type: 'rect', x: x + 2, y: y + 2, w: barWidth, h: barHeight, color: COLORS.shadow, fillOpacity: 0.3 });
+    // Main bar
+    canvas.push({ type: 'rect', x: x, y: y, w: barWidth, h: barHeight, color: barColor, fillOpacity: 0.9 });
+    // Bar highlight
+    canvas.push({ type: 'rect', x: x, y: y, w: barWidth, h: Math.min(barHeight, 8), color: COLORS.white, fillOpacity: 0.3 });
+
+    // Use "Store X" for the X-axis label
+    canvas.push({
+      text: `Store ${index + 1}`,
+      x: x + barWidth / 2,
+      y: margin.top + graphHeight + 6,
+      style: 'small',
+      bold: true,
+      color: COLORS.dark,
+      alignment: 'center'
+    });
+  });
+
+  // Axis Titles
+  canvas.push({ text: 'Number of Boxes', x: 15, y: chartHeight / 2, style: 'caption', bold: true, alignment: 'center' });
+  // Update X-axis title
+  canvas.push({ text: 'Store Stop', x: chartWidth / 2, y: chartHeight - 15, style: 'caption', bold: true, alignment: 'center' });
+
+  return { canvas, width: chartWidth, height: chartHeight };
 }
 
 
@@ -390,7 +391,8 @@ export async function generateTemplateBasedPDF_V1(reportData: any, templateDataP
   try {
     const safeReportData = {
       ...reportData,
-      scores: { ...reportData.scores,
+      scores: {
+        ...reportData.scores,
         efficiency: reportData.scores?.efficiency || reportData.scores?.stability || 85,
         spaceUtilization: reportData.scores?.spaceUtilization || reportData.loadingPlan?.volumeUtilization || 75,
         stability: reportData.scores?.stability || 90,
@@ -401,13 +403,13 @@ export async function generateTemplateBasedPDF_V1(reportData: any, templateDataP
     const docDefinition: any = {
       pageSize: 'A4',
       pageMargins: [45, 140, 45, 70],
-     
+
       header: (currentPage: number) => {
         if (currentPage === 1) {
           return {
             stack: [
               createHeaderDesign(),
-               { text: 'Walmart 3D Truck-Loading Report', style: 'reportTitle', margin: [0, 45, 0, 0] },
+              { text: 'CargoVision Truck-Loading Report', style: 'reportTitle', margin: [0, 45, 0, 0] },
               { text: `AI-Optimized Loading Analysis • Generated ${new Date(safeReportData.timestamp).toLocaleDateString()}`, style: 'reportSubtitle', margin: [0, 8, 0, 0] }
             ]
           };
@@ -415,7 +417,7 @@ export async function generateTemplateBasedPDF_V1(reportData: any, templateDataP
         return {
           stack: [
             { canvas: [{ type: 'rect', x: 0, y: 0, w: 595, h: 40, color: COLORS.light, fillOpacity: 0.5 }] },
-            { text: `Walmart Loading Report - Page ${currentPage}`, fontSize: 11, color: COLORS.dark, alignment: 'center', margin: [0, -30, 0, 0], bold: true }
+            { text: `CargoVision Loading Report - Page ${currentPage}`, fontSize: 11, color: COLORS.dark, alignment: 'center', margin: [0, -30, 0, 0], bold: true }
           ]
         };
       },
@@ -461,16 +463,16 @@ export async function generateTemplateBasedPDF_V1(reportData: any, templateDataP
           // This is crucial for defining the canvas size and preventing label clipping.
           const barChart = createDestinationBarChart(safeReportData);
           return {
-              ...barChart,
-              margin: [0, 0, 0, 25],
-              alignment: 'center'
+            ...barChart,
+            margin: [0, 0, 0, 25],
+            alignment: 'center'
           };
         })(),
-       
+
         // *** MODIFIED: Temperature Zone Pie Chart Section moved to be after the bar graph ***
         { text: 'Temperature Zone Analysis', style: 'subsectionHeader', margin: [0, 25, 0, 15] },
         createTemperaturePieChart(safeReportData),
-       
+
         // *** MODIFIED: Destination summary table now comes after the pie chart ***
         (() => {
           const uniqueDestinations = [...new Set(safeReportData.boxes.map((b: any) => b.destination || "Unknown"))];
@@ -483,20 +485,24 @@ export async function generateTemplateBasedPDF_V1(reportData: any, templateDataP
           return createModernTable(['Destination', 'Boxes', 'Total Weight', 'Avg Weight'], destinationData, 'Destination Summary', 1);
         })(),
 
-       
+
         { text: 'Performance Metrics', style: 'sectionHeader', margin: [0, 25, 0, 15] },
         {
           columns: [
-            { width: '*', stack: [
+            {
+              width: '*', stack: [
                 { text: 'Loading Efficiency', fontSize: 14, bold: true, color: COLORS.dark, margin: [0, 0, 0, 8] },
-                { canvas: [ { type: 'rect', x: 0, y: 0, w: 150, h: 20, color: COLORS.light }, { type: 'rect', x: 0, y: 0, w: safeReportData.scores.efficiency * 1.5, h: 20, color: COLORS.success } ] },
+                { canvas: [{ type: 'rect', x: 0, y: 0, w: 150, h: 20, color: COLORS.light }, { type: 'rect', x: 0, y: 0, w: safeReportData.scores.efficiency * 1.5, h: 20, color: COLORS.success }] },
                 { text: `${safeReportData.scores.efficiency.toFixed(1)}%`, fontSize: 16, bold: true, color: COLORS.success, margin: [0, 8, 0, 0] }
-            ] },
-            { width: '*', stack: [
+              ]
+            },
+            {
+              width: '*', stack: [
                 { text: 'Space Utilization', fontSize: 14, bold: true, color: COLORS.dark, margin: [0, 0, 0, 8] },
-                { canvas: [ { type: 'rect', x: 0, y: 0, w: 150, h: 20, color: COLORS.light }, { type: 'rect', x: 0, y: 0, w: safeReportData.scores.spaceUtilization * 1.5, h: 20, color: COLORS.primary } ] },
+                { canvas: [{ type: 'rect', x: 0, y: 0, w: 150, h: 20, color: COLORS.light }, { type: 'rect', x: 0, y: 0, w: safeReportData.scores.spaceUtilization * 1.5, h: 20, color: COLORS.primary }] },
                 { text: `${typeof safeReportData.scores.spaceUtilization === 'number' ? safeReportData.scores.spaceUtilization.toFixed(1) : 'N/A'}%`, fontSize: 16, bold: true, color: COLORS.primary, margin: [0, 8, 0, 0] }
-            ] }
+              ]
+            }
           ],
           columnGap: 30, margin: [0, 0, 0, 25]
         },
@@ -536,14 +542,14 @@ export async function generateTemplateBasedPDF_V1(reportData: any, templateDataP
         ...(reportData.images && reportData.images.length > 0 ? [
           { text: 'Loading Plan Visualizations', style: 'sectionHeader', pageBreak: 'before' },
           ...reportData.images.map((image: any) => ({
-           stack: [
+            stack: [
               { text: image.name, fontSize: 14, bold: true, color: COLORS.primary, margin: [0, 0, 0, 10] },
               { image: image.dataUrl, width: 500, alignment: 'center', margin: [0, 0, 0, 15] }
             ]
           }))
         ] : []),
         { text: 'AI Loading Recommendations', style: 'sectionHeader', margin: [0, 25, 0, 15] },
-        { ul: [ 'Load heavy items first to establish a stable base foundation', 'Maintain temperature zone separation for optimal product integrity', 'Ensure fragile items are properly cushioned and secured', 'Optimize weight distribution across all axles for safety', 'Plan unloading sequence based on delivery route efficiency' ], fontSize: 11, color: COLORS.dark, margin: [0, 0, 0, 20] },
+        { ul: ['Load heavy items first to establish a stable base foundation', 'Maintain temperature zone separation for optimal product integrity', 'Ensure fragile items are properly cushioned and secured', 'Optimize weight distribution across all axles for safety', 'Plan unloading sequence based on delivery route efficiency'], fontSize: 11, color: COLORS.dark, margin: [0, 0, 0, 20] },
         { text: 'Executive Summary', style: 'sectionHeader', margin: [0, 0, 0, 15] },
         { text: `This AI-optimized loading plan achieves ${safeReportData.loadingPlan.volumeUtilization}% volume utilization and ${safeReportData.loadingPlan.weightUtilization}% weight efficiency. The configuration ensures optimal safety with a ${safeReportData.scores.safety.toFixed(1)}% safety rating and maintains excellent stability at ${safeReportData.scores.stability.toFixed(1)}%. All temperature zones are properly segregated, and the loading sequence is optimized for efficient delivery operations.`, fontSize: 12, color: COLORS.dark, lineHeight: 1.6, margin: [0, 0, 0, 20] }
       ],
@@ -553,7 +559,7 @@ export async function generateTemplateBasedPDF_V1(reportData: any, templateDataP
     };
 
     const pdfDocGenerator = pdfMake.createPdf(docDefinition);
-    pdfDocGenerator.download(`walmart-loading-report-professional-${Date.now()}.pdf`);
+    pdfDocGenerator.download(`cargovision-loading-report-${Date.now()}.pdf`);
 
   } catch (error) {
     console.error("Error generating professional PDF:", error);

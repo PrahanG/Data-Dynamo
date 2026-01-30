@@ -16,7 +16,7 @@ export class PhysicsEngine {
 
   async initialize(): Promise<void> {
     try {
-      await RAPIER. init()
+      await RAPIER.init()
 
       const gravity = { x: 0.0, y: -9.81, z: 0.0 }
       this.world = new RAPIER.World(gravity)
@@ -24,7 +24,7 @@ export class PhysicsEngine {
       this.initialized = true
       console.log('✅ Physics engine initialized successfully')
     } catch (error) {
-      console.error('❌ Failed to initialize physics engine:', error) 
+      console.error('❌ Failed to initialize physics engine:', error)
       throw error
     }
   }
@@ -97,7 +97,7 @@ export class PhysicsEngine {
     }
   }
 
-  step(deltaTime: number = 1/60): PhysicsStats {
+  step(deltaTime: number = 1 / 60): PhysicsStats {
     if (!this.world || !this.initialized) {
       return {
         collisions: 0,
@@ -115,12 +115,12 @@ export class PhysicsEngine {
     let contacts = 0
     let totalForce = 0
 
-    this.world.forEachContactPair((collider1, collider2, manifold) => {
+    /* this.world.forEachContactPair((collider1, collider2, manifold) => {
       contacts++
       if (manifold.numContacts() > 0) {
         collisions++
       }
-    })
+    }) */
 
     this.bodies.forEach(body => {
       const velocity = body.linvel()

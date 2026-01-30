@@ -6,7 +6,7 @@ import { useBox, usePlane } from "@react-three/cannon"
 import { useOptimizationStore } from "@/store/optimization-store"
 import { useRef, useEffect, useState } from "react"
 import * as THREE from "three"
-import { useRouteStore } from "@/components/truck-visualization"
+import { useRouteStore } from "@/store/route-store"
 
 // Physics constants
 const PHYSICS_CONSTANTS = {
@@ -83,7 +83,7 @@ export function useTruckPhysics() {
             globalTruckPhysics.turnDirection = 1
             globalTruckPhysics.acceleration.x = -simulationForces.turning
             toast.info("↩️ Sharp Right Turn", {
-              description: "Lateral forces moving cargo left", 
+              description: "Lateral forces moving cargo left",
               position: "top-center",
             })
             break
@@ -114,7 +114,7 @@ export function PhysicsBox({ box, children }: PhysicsBoxProps) {
   const { simulationForces, isSimulationRunning, simulationSpeed } = useOptimizationStore()
 
   const [ref, api] = useBox(() => ({
-    mass: box.weight/10, // Convert to reasonable physics mass
+    mass: box.weight / 10, // Convert to reasonable physics mass
     position: [box.position.x, box.position.y, box.position.z],
     args: [box.width, box.height, box.length],
     material: {
@@ -132,14 +132,23 @@ export function PhysicsBox({ box, children }: PhysicsBoxProps) {
     const unsubscribeVelocity = api.velocity.subscribe((v) => velocityRef.current.set(...v))
     const unsubscribePosition = api.position.subscribe((p) => positionRef.current.set(...p))
 
+    // Debug mount
+    console.log(`📦 PhysicsBox ${box.id} mounted. Mass: ${box.weight / 10}`)
+
     return () => {
       unsubscribeVelocity()
       unsubscribePosition()
     }
-  }, [api])
+  }, [api, box.id, box.weight])
 
   useFrame((state, delta) => {
-    if (!isSimulationRunning) return
+    // Note: Parent component conditional rendering ensures this is usually true,
+    // but we check anyway.
+    if (!isSimulationRunning) {
+      // If we are here, it means we are mounted but simulation paused.
+      // We should probably wake up the box if we want it to settle?
+      return
+    }
     const adjustedDelta = delta * simulationSpeed
     const truckForce = new THREE.Vector3()
     truckForce.y += PHYSICS_CONSTANTS.GRAVITY * (box.weight / 100)
@@ -291,11 +300,11 @@ export function getAvailableDestinations() {
     }
 
     const store = useRouteStore.getState()
-    
+
     if (!store || !store.deliveryStops || store.deliveryStops.length === 0) {
       return ["Stop 1", "Stop 2", "Stop 3", "Stop 4"] // Default fallback
     }
-    
+
     return store.deliveryStops.map(stop => stop.name)
   } catch (error) {
     console.warn('Route store not available, using default destinations:', error)
@@ -311,11 +320,11 @@ export async function getAvailableDestinationsAsync() {
     }
 
     const store = useRouteStore.getState()
-    
+
     if (!store?.deliveryStops?.length) {
       return ["Stop 1", "Stop 2", "Stop 3", "Stop 4"]
     }
-    
+
     return store.deliveryStops.map(stop => stop.name)
   } catch (error) {
     console.warn('Route store not available:', error)
@@ -327,6 +336,7 @@ export async function getAvailableDestinationsAsync() {
 export function EnhancedBoxRenderer({ box }: { box: any }) {
   // Import the route store hook to access delivery stops
   const { deliveryStops } = useRouteStore()
+  const { focusedBoxId, isIsolationMode } = useOptimizationStore()
 
   const getBoxColor = (box: any) => {
     // Priority: Destination > Fragile > Temperature
@@ -344,27 +354,35 @@ export function EnhancedBoxRenderer({ box }: { box: any }) {
   }
 
   const getBoxOpacity = (box: any) => {
+    if (isIsolationMode && focusedBoxId && focusedBoxId !== box.id) {
+      return 0
+    }
     return box.isNew ? 0.7 : 1.0
   }
+
+  const isFocused = focusedBoxId === box.id
 
   return (
     <PhysicsBox box={box}>
       <boxGeometry args={[box.width, box.height, box.length]} />
       <meshStandardMaterial
         color={getBoxColor(box)}
-        transparent={box.isNew}
+        transparent={box.isNew || (isIsolationMode && !!focusedBoxId)}
         opacity={getBoxOpacity(box)}
         roughness={0.3}
         metalness={0.1}
+        emissive={isFocused ? "#ffffff" : "#000000"}
+        emissiveIntensity={isFocused ? 0.8 : 0}
       />
 
       {/* ONLY BLACK BORDERS - Same as InteractiveBoxRenderer */}
       <lineSegments>
         <edgesGeometry args={[new THREE.BoxGeometry(box.width, box.height, box.length), 1]} />
-        <lineBasicMaterial 
-          color="#000000"
-          transparent={false}
-          opacity={1.0}
+        <lineBasicMaterial
+          color={isFocused ? "#ffffff" : "#000000"}
+          transparent={true}
+          opacity={isIsolationMode && focusedBoxId && !isFocused ? 0 : 1.0}
+          linewidth={isFocused ? 2 : 1}
         />
       </lineSegments>
     </PhysicsBox>

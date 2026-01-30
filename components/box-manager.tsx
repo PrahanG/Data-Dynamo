@@ -17,33 +17,7 @@ import { Plus, QrCode, Trash2, Package, X, AlertTriangle } from "lucide-react";
 import { useOptimizationStore } from "@/store/optimization-store";
 import type { Box } from "@/types/box";
 
-// Import the route store from the TruckVisualization system
-import { create } from 'zustand'
-
-// Route Store Interface (matching the TruckVisualization system)
-interface DeliveryStop {
-  id: string
-  warehouseId: number
-  warehouse: {
-    id: number
-    name: string
-    address: string
-    coordinates: { lat: number; lng: number }
-    capacity: number
-  }
-  order: number
-  estimatedArrival?: string
-  isCompleted: boolean
-  name: string
-}
-
-interface RouteStore {
-  deliveryStops: DeliveryStop[]
-  getAvailableDestinations: () => string[]
-}
-
-// Use the same route store - import from TruckVisualization
-import { useRouteStore } from "./truck-visualization";
+import { useRouteStore } from "@/store/route-store";
 
 /* -------------------------------------------------------------------------- */
 /*                               QR Utilities                                 */
@@ -292,11 +266,11 @@ export function BoxManager() {
 
   const handleBulkDestinationUpdate = () => {
     if (!bulkDestination || selectedBoxes.size === 0) return;
-    
+
     selectedBoxes.forEach(boxId => {
       updateBox(boxId, { destination: bulkDestination });
     });
-    
+
     setSelectedBoxes(new Set());
     setBulkDestination("");
   };
@@ -381,7 +355,7 @@ export function BoxManager() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="flex gap-2">
               <Button
                 onClick={selectAllBoxes}
@@ -444,10 +418,11 @@ export function BoxManager() {
                       type="number"
                       min={0.1}
                       step={0.1}
-                      value={draft[k] as number}
-                      onChange={(e) =>
-                        setDraft({ ...draft, [k]: parseFloat(e.target.value) })
-                      }
+                      value={draft[k] === 0 ? "" : draft[k]}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value)
+                        setDraft({ ...draft, [k]: isNaN(val) ? 0 : val })
+                      }}
                       className="h-8 text-xs"
                     />
                   </div>
@@ -462,10 +437,11 @@ export function BoxManager() {
                   type="number"
                   min={0.1}
                   step={0.1}
-                  value={draft.weight}
-                  onChange={(e) =>
-                    setDraft({ ...draft, weight: parseFloat(e.target.value) })
-                  }
+                  value={draft.weight === 0 ? "" : draft.weight}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value)
+                    setDraft({ ...draft, weight: isNaN(val) ? 0 : val })
+                  }}
                   className="h-8 text-xs"
                 />
               </div>
@@ -638,11 +614,10 @@ export function BoxManager() {
             {boxes.map((b) => (
               <div
                 key={b.id}
-                className={`flex items-center justify-between p-2 rounded text-xs border transition-colors ${
-                  selectedBoxes.has(b.id) 
-                    ? 'bg-blue-500/20 border-blue-500/30' 
-                    : 'bg-muted/50 border-transparent hover:bg-muted/70'
-                }`}
+                className={`flex items-center justify-between p-2 rounded text-xs border transition-colors ${selectedBoxes.has(b.id)
+                  ? 'bg-blue-500/20 border-blue-500/30'
+                  : 'bg-muted/50 border-transparent hover:bg-muted/70'
+                  }`}
               >
                 <div className="flex items-center space-x-2 flex-1">
                   {hasRouteStops && (
@@ -660,13 +635,12 @@ export function BoxManager() {
                     </div>
                     <div className="flex items-center space-x-2 mt-1 flex-wrap">
                       <span
-                        className={`px-1 py-0.5 rounded text-xs font-medium ${
-                          b.temperatureZone === "frozen"
-                            ? "bg-primary/20 text-primary"
-                            : b.temperatureZone === "cold"
+                        className={`px-1 py-0.5 rounded text-xs font-medium ${b.temperatureZone === "frozen"
+                          ? "bg-primary/20 text-primary"
+                          : b.temperatureZone === "cold"
                             ? "bg-cyan-500/20 text-cyan-400"
                             : "bg-secondary/20 text-secondary"
-                        }`}
+                          }`}
                       >
                         {b.temperatureZone}
                       </span>

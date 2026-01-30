@@ -60,7 +60,7 @@ export function WorkspaceSelector({
             </div>
           </div>
           <h1 className="text-4xl font-bold text-foreground mb-4">
-            PackPilot
+            CargoVision
           </h1>
           <p className="text-xl text-primary max-w-2xl mx-auto">
             Advanced physics-based warehouse management system for optimizing
@@ -120,8 +120,8 @@ export function WorkspaceSelector({
               </div>
 
               <button
-  type="button"
-  className="
+                type="button"
+                className="
     relative w-full mt-6 py-2
     flex justify-center items-center   /* centers text */
     text-sm font-semibold text-white text-center
@@ -136,9 +136,9 @@ export function WorkspaceSelector({
     before:bg-emerald-400/70
     hover:before:opacity-70
   "
->
-  Load Sample Workspace
-</button>
+              >
+                Load Sample Workspace
+              </button>
 
             </CardContent>
           </Card>

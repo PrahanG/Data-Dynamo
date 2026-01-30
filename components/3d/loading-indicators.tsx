@@ -9,14 +9,10 @@ export function LoadingIndicators() {
   return (
     <group>
       {/* Loading sequence numbers */}
-      {loadingSequence.slice(0, 10).map((boxId, index) => {
-        //@ts-ignore
-        const box = boxes.find((b) => b.id === boxId)
-        if (!box) return null
-
+      {loadingSequence.slice(0, 10).map((box, index) => {
         return (
           <Text
-            key={boxId}
+            key={box.id}
             position={[box.position.x, box.position.y + box.height / 2 + 0.8, box.position.z]}
             fontSize={0.4}
             color="#00ff88"

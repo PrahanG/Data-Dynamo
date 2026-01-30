@@ -9,7 +9,7 @@ import { BoxManager } from "@/components/box-manager";
 import { PhysicsPanel } from "@/components/physics-panel";
 import { ReportGenerator } from "@/components/report-generator";
 import { PerformanceMonitor } from "@/components/performance-monitor";
-import { StatusPanel } from "@/components/status-panel";
+
 import { ScoreDisplay } from "@/components/score-display";
 import { SimulationControls } from "@/components/simulation-controls";
 import { useOptimizationStore } from "@/store/optimization-store";
@@ -88,7 +88,7 @@ export default function WalmartTruckOptimizer() {
   }
 
   const handleoptim = () => {
-  useOptimizationStore.getState().optimizeLayout()
+    useOptimizationStore.getState().optimizeLayout()
   }
 
   return (
@@ -101,7 +101,7 @@ export default function WalmartTruckOptimizer() {
                 <Truck className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">PackPilot</h1>
+                <h1 className="text-2xl font-bold">CargoVision</h1>
                 <p className="text-sm text-primary">
                   {currentWorkspace?.name ||
                     "Advanced Physics-Based Warehouse Management System"}
@@ -142,9 +142,8 @@ export default function WalmartTruckOptimizer() {
       <div className="flex h-[calc(100vh-88px)]">
         {/* sidebar */}
         <div
-          className={`${
-            sidebarCollapsed ? "w-16" : "w-80"
-          } transition-all duration-300 bg-[#0f0f10]/50 backdrop-blur-sm flex flex-col border-r border-primary/20`}
+          className={`${sidebarCollapsed ? "w-16" : "w-80"
+            } transition-all duration-300 bg-[#0f0f10]/50 backdrop-blur-sm flex flex-col border-r border-primary/20`}
         >
           {/* collapse btn */}
           <div className="p-4 border-b border-primary/30">
@@ -282,7 +281,7 @@ export default function WalmartTruckOptimizer() {
       </div>
 
       {/* Status Panel - Non-intrusive floating panel */}
-      <StatusPanel />
+
     </div>
   );
 }

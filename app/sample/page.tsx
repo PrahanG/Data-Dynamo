@@ -7,7 +7,7 @@ import { TruckVisualization } from "@/components/truck-visualization";
 import MapVisualization from "@/components/map-visualization";
 import { ControlPanel } from "@/components/control-panel";
 import { BoxManager } from "@/components/box-manager";
-import { useRouteStore,initializeRouteStore } from "@/components/truck-visualization";
+import { useRouteStore, initializeRouteStore } from "@/store/route-store";
 import { PhysicsPanel } from "@/components/physics-panel";
 import { ReportGenerator } from "@/components/report-generator";
 import { PerformanceMonitor } from "@/components/performance-monitor";
@@ -158,11 +158,11 @@ export default function SamplePage() {
         resetToEmpty,
     } = useOptimizationStore();
 
-    const { 
-        createWorkspace, 
-        loadWorkspace, 
-        currentWorkspace, 
-        saveWorkspace 
+    const {
+        createWorkspace,
+        loadWorkspace,
+        currentWorkspace,
+        saveWorkspace
     } = useWorkspaceStore();
 
     // ───────────────────────── Step Progress Calculation ─────────────────────────
@@ -187,14 +187,14 @@ export default function SamplePage() {
         try {
             const workspace = createWorkspace(workspaceName, "sample");
             loadWorkspace(workspace.id);
-            
+
             // Set truck dimensions based on scenario
             setTruckDimensions(truckConfig);
-            
+
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             setLoadingMessage("Setting up default routes...");
-            
+
             // Load default routes for scenario
             const defaultRoutes = DEMO_SCENARIOS[selectedScenario].defaultRoutes.map((route, index) => ({
                 id: `route-${index}`,
@@ -204,9 +204,9 @@ export default function SamplePage() {
                 priority: route.priority,
                 estimatedBoxes: route.estimatedBoxes
             }));
-            
+
             setRoutes(defaultRoutes);
-            
+
             // Initialize the route store with routes
             try {
                 const initialized = initializeRouteStore(defaultRoutes);
@@ -218,10 +218,10 @@ export default function SamplePage() {
             } catch (routeError) {
                 console.warn("Route store initialization failed, continuing without route integration:", routeError);
             }
-            
+
             await new Promise(resolve => setTimeout(resolve, 500));
             setCurrentStep("routes");
-            
+
         } catch (error) {
             console.error("Error creating workspace:", error);
         } finally {
@@ -236,9 +236,9 @@ export default function SamplePage() {
             id: `route-${Date.now()}`,
             name: newRoute.name,
             address: newRoute.address,
-            coordinates: { 
-                lat: 32.7767 + (routes.length * 0.01), 
-                lng: -96.7970 + (routes.length * 0.01) 
+            coordinates: {
+                lat: 32.7767 + (routes.length * 0.01),
+                lng: -96.7970 + (routes.length * 0.01)
             },
             priority: routes.length + 1,
             estimatedBoxes: newRoute.estimatedBoxes
@@ -246,13 +246,13 @@ export default function SamplePage() {
 
         const updatedRoutes = [...routes, route];
         setRoutes(updatedRoutes);
-        
+
         // Update route store as well
         try {
             if (typeof window !== 'undefined') {
                 //@ts-ignore
                 const { setDeliveryStops } = useRouteStore.getState();
-                
+
                 const routeStops = updatedRoutes.map(r => ({
                     id: r.id,
                     name: r.name,
@@ -263,26 +263,26 @@ export default function SamplePage() {
                     boxCount: r.estimatedBoxes,
                     completed: false
                 }));
-                
+
                 setDeliveryStops(routeStops);
             }
         } catch (error) {
             console.warn("Failed to update route store:", error);
         }
-        
+
         setNewRoute({ name: "", address: "", estimatedBoxes: 10 });
     };
 
     const removeRoute = async (id: string) => {
         const updatedRoutes = routes.filter(r => r.id !== id);
         setRoutes(updatedRoutes);
-        
+
         // Update route store as well
         try {
             if (typeof window !== 'undefined') {
                 //@ts-ignore
                 const { setDeliveryStops } = useRouteStore.getState();
-                
+
                 const routeStops = updatedRoutes.map(r => ({
                     id: r.id,
                     name: r.name,
@@ -293,7 +293,7 @@ export default function SamplePage() {
                     boxCount: r.estimatedBoxes,
                     completed: false
                 }));
-                
+
                 setDeliveryStops(routeStops);
             }
         } catch (error) {
@@ -309,29 +309,29 @@ export default function SamplePage() {
             // Use the safe route integration utility
             if (routes.length > 0) {
                 const initialized = await initializeRouteStore(routes);
-                
+
                 if (initialized) {
                     setLoadingMessage("Routes configured successfully...");
                 } else {
                     setLoadingMessage("Using default route configuration...");
                 }
-                
+
                 await new Promise(resolve => setTimeout(resolve, 800));
             }
 
             setLoadingMessage("Generating sample boxes with destinations...");
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             // Generate sample data - now safe to call
             loadSampleData();
-            
+
             setLoadingMessage("Finalizing setup...");
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             setCurrentStep("optimization");
         } catch (error) {
             console.error("Error in data generation process:", error);
-            
+
             // Fallback: try to load sample data anyway
             try {
                 setLoadingMessage("Loading with fallback configuration...");
@@ -391,18 +391,18 @@ export default function SamplePage() {
                             <div className="flex items-center space-x-4">
                                 <div className="relative">
                                     <Image
-                                    src="/logo_image.jpg"  // <-- your JPG file here
-                                    alt="PackPilot Logo"
-                                    width={80}
-                                    height={80}
-                                    className="rounded-xl"
+                                        src="/logo_cargovision.jpg"  // <-- your JPG file here
+                                        alt="CargoVision Logo"
+                                        width={80}
+                                        height={80}
+                                        className="rounded-xl"
                                     />
 
                                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
                                 </div>
                                 <div>
                                     <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-                                        PackPilot Setup Wizard
+                                        CargoVision Setup Wizard
                                     </h1>
                                     <p className="text-sm text-gray-400">
                                         Configure your delivery scenario step by step
@@ -430,18 +430,16 @@ export default function SamplePage() {
                                     { step: "optimization", label: "Optimize", icon: TrendingUp }
                                 ].map(({ step, label, icon: Icon }, index) => (
                                     <div key={step} className="flex items-center">
-                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                                            currentStep === step
-                                                ? "border-primary bg-primary text-white"
-                                                : setupProgress > (index + 1) * 25
+                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${currentStep === step
+                                            ? "border-primary bg-primary text-white"
+                                            : setupProgress > (index + 1) * 25
                                                 ? "border-green-500 bg-green-500 text-white"
                                                 : "border-gray-600 text-gray-400"
-                                        }`}>
+                                            }`}>
                                             <Icon className="h-5 w-5" />
                                         </div>
-                                        <span className={`ml-2 text-sm ${
-                                            currentStep === step ? "text-primary" : "text-gray-400"
-                                        }`}>
+                                        <span className={`ml-2 text-sm ${currentStep === step ? "text-primary" : "text-gray-400"
+                                            }`}>
                                             {label}
                                         </span>
                                         {index < 3 && (
@@ -476,7 +474,7 @@ export default function SamplePage() {
                                                         className="mt-2"
                                                     />
                                                 </div>
-                                                
+
                                                 <div>
                                                     <Label>Select Delivery Scenario</Label>
                                                     <Select value={selectedScenario} onValueChange={(value) => {
@@ -564,19 +562,19 @@ export default function SamplePage() {
                                                     <Input
                                                         placeholder="Stop name..."
                                                         value={newRoute.name}
-                                                        onChange={(e) => setNewRoute({...newRoute, name: e.target.value})}
+                                                        onChange={(e) => setNewRoute({ ...newRoute, name: e.target.value })}
                                                     />
                                                     <Input
                                                         placeholder="Address..."
                                                         value={newRoute.address}
-                                                        onChange={(e) => setNewRoute({...newRoute, address: e.target.value})}
+                                                        onChange={(e) => setNewRoute({ ...newRoute, address: e.target.value })}
                                                     />
                                                     <div className="flex space-x-2">
                                                         <Input
                                                             type="number"
                                                             placeholder="Est. boxes"
                                                             value={newRoute.estimatedBoxes}
-                                                            onChange={(e) => setNewRoute({...newRoute, estimatedBoxes: parseInt(e.target.value) || 0})}
+                                                            onChange={(e) => setNewRoute({ ...newRoute, estimatedBoxes: parseInt(e.target.value) || 0 })}
                                                             className="flex-1"
                                                         />
                                                         <Button onClick={addRoute} size="sm">
@@ -612,7 +610,7 @@ export default function SamplePage() {
                                                     <Package className="h-16 w-16 text-primary mx-auto mb-4" />
                                                     <h4 className="text-lg font-medium mb-2">Generate Sample Data</h4>
                                                     <p className="text-gray-400 mb-4">
-                                                        Routes are configured! Now we'll create {DEMO_SCENARIOS[selectedScenario].boxCount} sample boxes 
+                                                        Routes are configured! Now we'll create {DEMO_SCENARIOS[selectedScenario].boxCount} sample boxes
                                                         based on your {routes.length} delivery stops and scenario requirements.
                                                     </p>
                                                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -621,7 +619,7 @@ export default function SamplePage() {
                                                         <div>Temperature Zones: {DEMO_SCENARIOS[selectedScenario].temperatureZones.length}</div>
                                                         <div>Fragile Items: ~{Math.floor(DEMO_SCENARIOS[selectedScenario].boxCount * 0.15)}</div>
                                                     </div>
-                                                    
+
                                                     <div className="mt-4 p-3 bg-green-500/10 rounded border border-green-500/20">
                                                         <div className="flex items-center justify-center space-x-2 text-sm text-green-400">
                                                             <CheckCircle className="h-4 w-4" />
@@ -657,7 +655,7 @@ export default function SamplePage() {
                                                     <CheckCircle className="h-16 w-16 text-green-400 mx-auto mb-4" />
                                                     <h4 className="text-lg font-medium mb-2">Data Generated Successfully!</h4>
                                                     <p className="text-gray-400 mb-4">
-                                                        {boxes.length + unplaceableBoxes.length} boxes created. 
+                                                        {boxes.length + unplaceableBoxes.length} boxes created.
                                                         Now let's optimize the truck layout for maximum efficiency.
                                                     </p>
                                                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -715,19 +713,19 @@ export default function SamplePage() {
                         <div className="flex items-center space-x-4">
                             <div className="relative">
                                 <Image
-                                    src="/logo_image.jpg"  // <-- your JPG file here
-                                    alt="PackPilot Logo"
+                                    src="/logo_cargovision.jpg"  // <-- your JPG file here
+                                    alt="CargoVision Logo"
                                     width={80}
                                     height={80}
                                     className="rounded-xl"
-                                    />
+                                />
 
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
                             </div>
 
                             <div>
                                 <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-                                    PackPilot
+                                    CargoVision
                                 </h1>
                                 <p className="text-sm text-primary font-medium">
                                     {currentWorkspace?.name || workspaceName}
@@ -745,8 +743,8 @@ export default function SamplePage() {
                                 {unplaceableBoxes.length > 0 && (
                                     <div className="flex items-center space-x-2 px-3 py-1 bg-red-500/10 rounded-full">
                                         <AlertCircle className="h-4 w-4 text-red-400" />
-                                    <span>{unplaceableBoxes.length} Unplaced</span>
-                                </div>
+                                        <span>{unplaceableBoxes.length} Unplaced</span>
+                                    </div>
                                 )}
                                 <div className="flex items-center space-x-2 px-3 py-1 bg-orange-500/10 rounded-full">
                                     <Shield className="h-4 w-4 text-orange-400" />
@@ -759,17 +757,17 @@ export default function SamplePage() {
                             </div>
 
                             <PerformanceMonitor />
-                            
+
                             <ScoreDisplay
                                 stabilityScore={stabilityScore}
                                 safetyScore={safetyScore}
                                 optimizationScore={optimizationScore}
                             />
-                            
+
                             <div className="flex items-center space-x-2">
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
+                                <Button
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => {
                                         if (!currentWorkspace) return;
                                         saveWorkspace(currentWorkspace.id, {
@@ -784,9 +782,9 @@ export default function SamplePage() {
                                     <Save className="h-4 w-4 mr-1" />
                                     Save Demo
                                 </Button>
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
+                                <Button
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => {
                                         setIsSetupComplete(false);
                                         setCurrentStep("workspace");
@@ -884,8 +882,8 @@ export default function SamplePage() {
                                                 <span className="font-medium">{boxes.length + unplaceableBoxes.length}</span>
                                             </div>
                                         </div>
-                                        <Progress 
-                                            value={(boxes.length / (boxes.length + unplaceableBoxes.length)) * 100} 
+                                        <Progress
+                                            value={(boxes.length / (boxes.length + unplaceableBoxes.length)) * 100}
                                             className="h-2"
                                         />
                                         <div className="text-xs text-gray-400 text-center">
@@ -961,9 +959,9 @@ export default function SamplePage() {
                                         )}
                                     </Button>
                                 ))}
-                                
+
                                 <div className="h-6 w-px bg-primary/30 mx-2" />
-                                
+
                                 <Button
                                     variant={isSimulationRunning ? "destructive" : "secondary"}
                                     size="sm"
@@ -1023,7 +1021,7 @@ export default function SamplePage() {
                         ) : (
                             <TruckVisualization viewMode={activeView} />
                         )}
-                        
+
                         {/* Demo Overlay */}
                         <div className="absolute top-4 left-4 space-y-2">
                             <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
@@ -1066,8 +1064,7 @@ export default function SamplePage() {
                 </div>
             </div>
 
-            {/* Enhanced Status Panel */}
-            <StatusPanel />
+
         </div>
     );
 }

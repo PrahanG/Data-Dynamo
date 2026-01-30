@@ -7,11 +7,11 @@ import { TruckVisualization } from "@/components/truck-visualization";
 import MapVisualization from "@/components/map-visualization";
 import { ControlPanel } from "@/components/control-panel";
 import { BoxManager } from "@/components/box-manager";
-import { useRouteStore, initializeRouteStore } from "@/components/truck-visualization";
+import { useRouteStore, initializeRouteStore } from "@/store/route-store";
 import { PhysicsPanel } from "@/components/physics-panel";
 import { ReportGenerator } from "@/components/report-generator";
 import { PerformanceMonitor } from "@/components/performance-monitor";
-import { StatusPanel } from "@/components/status-panel";
+
 import { ScoreDisplay } from "@/components/score-display";
 import { SimulationControls } from "@/components/simulation-controls";
 import { useOptimizationStore } from "@/store/optimization-store";
@@ -24,7 +24,9 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import {
   Truck,
@@ -78,7 +80,7 @@ export default function NewWorkspacePage() {
   // ───────────────────────── Workspace State ─────────────────────────
   const [workspaceName, setWorkspaceName] = useState("");
   const [workspaceDescription, setWorkspaceDescription] = useState("");
-  
+
   // ───────────────────────── Truck State ─────────────────────────
   const [truckId, setTruckId] = useState("");
 
@@ -91,6 +93,7 @@ export default function NewWorkspacePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [isMapOpen, setIsMapOpen] = useState(false); // Map picker modal state
 
   // ───────────────────────── stores ─────────────────────────
   const {
@@ -109,11 +112,11 @@ export default function NewWorkspacePage() {
     resetToEmpty,
   } = useOptimizationStore();
 
-  const { 
-    createWorkspace, 
-    loadWorkspace, 
-    currentWorkspace, 
-    saveWorkspace 
+  const {
+    createWorkspace,
+    loadWorkspace,
+    currentWorkspace,
+    saveWorkspace
   } = useWorkspaceStore();
 
   // ───────────────────────── Step Progress Calculation ─────────────────────────
@@ -146,29 +149,20 @@ export default function NewWorkspacePage() {
       const workspace = createWorkspace(workspaceName, "empty");
       workspace.description = workspaceDescription;
       loadWorkspace(workspace.id);
-      
+
       // Set default truck dimensions
       setTruckDimensions(DEFAULT_TRUCK_CONFIG);
-      
+
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       setLoadingMessage("Setting up default route...");
-      
-      // Add a default starting point route
-      const defaultRoute: RouteStop = {
-        id: 'route-0',
-        name: 'Distribution Center',
-        address: '123 Main St, City, State',
-        coordinates: { lat: 32.7767, lng: -96.7970 },
-        priority: 1,
-        estimatedBoxes: 0
-      };
-      
-      setRoutes([defaultRoute]);
-      
+
+
+      setRoutes([]);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       setCurrentStep("routes");
-      
+
     } catch (error) {
       console.error("Error creating workspace:", error);
     } finally {
@@ -183,9 +177,9 @@ export default function NewWorkspacePage() {
       id: `route-${Date.now()}`,
       name: newRoute.name,
       address: newRoute.address,
-      coordinates: { 
-        lat: 32.7767 + (routes.length * 0.01), 
-        lng: -96.7970 + (routes.length * 0.01) 
+      coordinates: {
+        lat: 32.7767 + (routes.length * 0.01),
+        lng: -96.7970 + (routes.length * 0.01)
       },
       priority: routes.length + 1,
       estimatedBoxes: newRoute.estimatedBoxes
@@ -193,13 +187,13 @@ export default function NewWorkspacePage() {
 
     const updatedRoutes = [...routes, route];
     setRoutes(updatedRoutes);
-    
+
     // Update route store as well
     try {
       if (typeof window !== 'undefined') {
         //@ts-ignore
         const { setDeliveryStops } = useRouteStore.getState();
-        
+
         const routeStops = updatedRoutes.map(r => ({
           id: r.id,
           name: r.name,
@@ -210,26 +204,26 @@ export default function NewWorkspacePage() {
           boxCount: r.estimatedBoxes,
           completed: false
         }));
-        
+
         setDeliveryStops(routeStops);
       }
     } catch (error) {
       console.warn("Failed to update route store:", error);
     }
-    
+
     setNewRoute({ name: "", address: "", estimatedBoxes: 10 });
   };
 
   const removeRoute = async (id: string) => {
     const updatedRoutes = routes.filter(r => r.id !== id);
     setRoutes(updatedRoutes);
-    
+
     // Update route store as well
     try {
       if (typeof window !== 'undefined') {
         //@ts-ignore
         const { setDeliveryStops } = useRouteStore.getState();
-        
+
         const routeStops = updatedRoutes.map(r => ({
           id: r.id,
           name: r.name,
@@ -240,7 +234,7 @@ export default function NewWorkspacePage() {
           boxCount: r.estimatedBoxes,
           completed: false
         }));
-        
+
         setDeliveryStops(routeStops);
       }
     } catch (error) {
@@ -250,32 +244,50 @@ export default function NewWorkspacePage() {
 
   const finalizeSetup = async () => {
     setIsLoading(true);
-    setLoadingMessage("Initializing route system...");
+    setLoadingMessage("Saving workspace to server...");
 
     try {
+      // Save configuration to backend
+      try {
+        await fetch('/api/workspaces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: workspaceName,
+            description: workspaceDescription,
+            truckId: truckId,
+            routes: routes
+          })
+        });
+      } catch (e) {
+        console.error("Failed to save to backend:", e);
+        // Continue with local setup even if backend fails (graceful degradation)
+      }
+
+      setLoadingMessage("Initializing route system...");
       // Initialize route store if routes exist
       if (routes.length > 0) {
         const initialized = await initializeRouteStore(routes);
-        
+
         if (initialized) {
           setLoadingMessage("Routes configured successfully...");
         } else {
           setLoadingMessage("Using default route configuration...");
         }
-        
+
         await new Promise(resolve => setTimeout(resolve, 800));
       }
-      
+
       setLoadingMessage("Initializing physics engine...");
-      
+
       // Initialize physics
       initializePhysics();
-      
+
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       setCurrentStep("complete");
       setIsSetupComplete(true);
-      
+
     } catch (error) {
       console.error("Error finalizing setup:", error);
     } finally {
@@ -306,7 +318,7 @@ export default function NewWorkspacePage() {
                   <Truck className="h-7 w-7 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">PackPilot - New Workspace</h1>
+                  <h1 className="text-2xl font-bold">CargoVision - New Workspace</h1>
                   <p className="text-sm text-primary">
                     Create empty workspace with route configuration
                   </p>
@@ -343,18 +355,16 @@ export default function NewWorkspacePage() {
                     { step: "routes", label: "Routes", icon: Route }
                   ].map(({ step, label, icon: Icon }, index) => (
                     <div key={step} className="flex items-center">
-                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                        currentStep === step
-                          ? "border-primary bg-primary text-white"
-                          : setupProgress > (index + 1) * 50
+                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${currentStep === step
+                        ? "border-primary bg-primary text-white"
+                        : setupProgress > (index + 1) * 50
                           ? "border-green-500 bg-green-500 text-white"
                           : "border-gray-600 text-gray-400"
-                      }`}>
+                        }`}>
                         <Icon className="h-5 w-5" />
                       </div>
-                      <span className={`ml-2 text-sm ${
-                        currentStep === step ? "text-primary" : "text-gray-400"
-                      }`}>
+                      <span className={`ml-2 text-sm ${currentStep === step ? "text-primary" : "text-gray-400"
+                        }`}>
                         {label}
                       </span>
                       {index < 1 && (
@@ -387,7 +397,7 @@ export default function NewWorkspacePage() {
                               className="mt-2"
                             />
                           </div>
-                          
+
                           <div>
                             <Label htmlFor="truck-id">Truck ID *</Label>
                             <div className="flex items-center space-x-2 mt-2">
@@ -404,7 +414,7 @@ export default function NewWorkspacePage() {
                               Unique identifier for this truck configuration
                             </p>
                           </div>
-                          
+
                           <div>
                             <Label htmlFor="workspace-description">Description (Optional)</Label>
                             <Input
@@ -484,19 +494,30 @@ export default function NewWorkspacePage() {
                             <Input
                               placeholder="Stop name..."
                               value={newRoute.name}
-                              onChange={(e) => setNewRoute({...newRoute, name: e.target.value})}
+                              onChange={(e) => setNewRoute({ ...newRoute, name: e.target.value })}
                             />
-                            <Input
-                              placeholder="Address..."
-                              value={newRoute.address}
-                              onChange={(e) => setNewRoute({...newRoute, address: e.target.value})}
-                            />
+                            <div className="flex space-x-2">
+                              <Input
+                                placeholder="Address... (or select on map)"
+                                value={newRoute.address}
+                                onChange={(e) => setNewRoute({ ...newRoute, address: e.target.value })}
+                                className="flex-1"
+                              />
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setIsMapOpen(true)}
+                                title="Select location on map"
+                              >
+                                <MapPin className="h-4 w-4" />
+                              </Button>
+                            </div>
                             <div className="flex space-x-2">
                               <Input
                                 type="number"
                                 placeholder="Est. boxes"
                                 value={newRoute.estimatedBoxes}
-                                onChange={(e) => setNewRoute({...newRoute, estimatedBoxes: parseInt(e.target.value) || 0})}
+                                onChange={(e) => setNewRoute({ ...newRoute, estimatedBoxes: parseInt(e.target.value) || 0 })}
                                 className="flex-1"
                               />
                               <Button onClick={addRoute} size="sm">
@@ -550,6 +571,34 @@ export default function NewWorkspacePage() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Map Picker Modal */}
+                <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+                  <DialogContent className="max-w-4xl h-[80vh] p-0 bg-zinc-900 border-zinc-800">
+                    <DialogHeader className="p-4 border-b border-zinc-800 bg-zinc-900 absolute top-0 left-0 right-0 z-10 backdrop-blur-sm bg-opacity-90">
+                      <DialogTitle className="text-white flex items-center">
+                        <MapPin className="h-5 w-5 mr-2 text-primary" />
+                        Select Location
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="h-full pt-16 pb-0 relative">
+                      <MapVisualization
+                        onLocationSelect={(location) => {
+                          setNewRoute(prev => ({
+                            ...prev,
+                            address: location.address,
+                            // Only auto-fill name if it's empty
+                            name: prev.name ? prev.name : location.name
+                          }));
+                          setIsMapOpen(false);
+                        }}
+                      />
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 bg-black/70 text-white px-4 py-2 rounded-full text-sm pointer-events-none backdrop-blur-md border border-white/10">
+                        Click any location or use search to select
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </div>
@@ -570,7 +619,7 @@ export default function NewWorkspacePage() {
                 <Truck className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">PackPilot</h1>
+                <h1 className="text-2xl font-bold">CargoVision</h1>
                 <div className="flex items-center space-x-2">
                   <p className="text-sm text-primary">
                     {currentWorkspace?.name || "Advanced Physics-Based Warehouse Management System"}
@@ -592,17 +641,36 @@ export default function NewWorkspacePage() {
                 optimizationScore={optimizationScore}
               />
               <div className="flex items-center space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
                     if (!currentWorkspace) return;
-                    saveWorkspace(currentWorkspace.id, {
+                    const updatedWorkspace = {
                       ...currentWorkspace,
                       boxes,
                       truckDimensions,
                       lastModified: new Date().toISOString(),
-                    });
+                    };
+
+                    // Save locally
+                    saveWorkspace(currentWorkspace.id, updatedWorkspace);
+
+                    // Sync to backend
+                    try {
+                      const res = await fetch('/api/workspaces', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatedWorkspace)
+                      });
+                      if (res.ok) {
+                        // precise alert or toast
+                      } else {
+                        console.warn("Server save failed");
+                      }
+                    } catch (e) {
+                      console.error("Failed to save to backend", e);
+                    }
                   }}
                 >
                   <Save className="h-4 w-4 mr-1" />
@@ -618,9 +686,8 @@ export default function NewWorkspacePage() {
       <div className="flex h-[calc(100vh-88px)]">
         {/* sidebar */}
         <div
-          className={`${
-            sidebarCollapsed ? "w-16" : "w-80"
-          } transition-all duration-300 bg-[#0f0f10]/50 backdrop-blur-sm flex flex-col border-r border-primary/20`}
+          className={`${sidebarCollapsed ? "w-16" : "w-80"
+            } transition-all duration-300 bg-[#0f0f10]/50 backdrop-blur-sm flex flex-col border-r border-primary/20`}
         >
           {/* collapse btn */}
           <div className="p-4 border-b border-primary/30">
@@ -767,9 +834,9 @@ export default function NewWorkspacePage() {
                     )}
                   </Button>
                 ))}
-                
+
                 <div className="h-6 w-px bg-primary/30 mx-2" />
-                
+
                 <Button
                   variant={isSimulationRunning ? "destructive" : "secondary"}
                   size="sm"
@@ -780,7 +847,7 @@ export default function NewWorkspacePage() {
                   {isSimulationRunning ? "Stop Physics" : "Run Physics"}
                 </Button>
               </div>
-              
+
               {/* Action Buttons */}
               <div className="flex items-center space-x-2">
                 <Button
@@ -833,7 +900,7 @@ export default function NewWorkspacePage() {
             ) : (
               <TruckVisualization viewMode={activeView} />
             )}
-            
+
             {/* Empty state overlay when no boxes */}
             {boxes.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center bg-[#0f0f10]/80 backdrop-blur-sm">
@@ -841,7 +908,7 @@ export default function NewWorkspacePage() {
                   <Package className="h-16 w-16 text-primary/50 mx-auto mb-4" />
                   <h2 className="text-2xl font-bold mb-2">Empty Truck - Ready to Load</h2>
                   <p className="text-primary/70 mb-6">
-                    Your truck <span className="font-mono text-primary">{truckId}</span> is configured with {routes.length} routes. 
+                    Your truck <span className="font-mono text-primary">{truckId}</span> is configured with {routes.length} routes.
                     Start by adding boxes using the Box Manager in the sidebar.
                   </p>
                   <div className="flex flex-col gap-2 text-sm text-primary/60">
@@ -850,7 +917,7 @@ export default function NewWorkspacePage() {
                     <p>• Use "Physics" tab to configure simulation settings</p>
                     <p>• Import boxes from CSV or Excel files</p>
                   </div>
-                  
+
                   <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
                     <h3 className="text-sm font-medium text-primary mb-2">Truck & Route Summary</h3>
                     <div className="grid grid-cols-2 gap-2 text-xs text-gray-300">
@@ -864,13 +931,13 @@ export default function NewWorkspacePage() {
               </div>
             )}
 
-            
-            </div>
+
+          </div>
         </div>
       </div>
 
       {/* Status Panel - Non-intrusive floating panel */}
-      <StatusPanel />
+
     </div>
   );
 }
