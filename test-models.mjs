@@ -5,7 +5,7 @@ import fs from 'fs';
 async function listModels() {
     console.log("Listing Models...");
     try {
-        const genAI = new GoogleGenerativeAI("AIzaSyBy8xWCiw4jxuj7YF3Rt7HMpQiuds7jaQw");
+        const genAI = new GoogleGenerativeAI("GEMINI_API_KEY");
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
         // Actually the SDK doesn't expose listModels directly on the main class easily in all versions?
         // Wait, it does usually require fetch direct call or using the model manager if available.
