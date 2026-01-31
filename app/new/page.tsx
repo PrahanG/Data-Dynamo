@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { REGISTERED_RETAILERS } from "@/data/registered-retailers";
 
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -91,6 +92,8 @@ export default function NewWorkspacePage() {
   // ───────────────────────── UI State ─────────────────────────
   const [activeView, setActiveView] = useState<"3d" | "2d" | "hybrid" | "map">("3d");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(320); // Default width
+  const [isResizing, setIsResizing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [isMapOpen, setIsMapOpen] = useState(false); // Map picker modal state
@@ -138,6 +141,34 @@ export default function NewWorkspacePage() {
     }
   }, [workspaceName, truckId]);
 
+  // ───────────────────────── Sidebar Resize Logic ─────────────────────────
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  const stopResizing = () => {
+    setIsResizing(false);
+  };
+
+  const resize = (e: MouseEvent) => {
+    if (isResizing) {
+      const newWidth = e.clientX;
+      if (newWidth > 200 && newWidth < 600) { // Min 200px, Max 600px
+        setSidebarWidth(newWidth);
+      }
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [isResizing]);
+
   // ───────────────────────── Setup Functions ─────────────────────────
   const initializeWorkspace = async () => {
     if (!workspaceName.trim() || !truckId.trim()) return;
@@ -173,13 +204,19 @@ export default function NewWorkspacePage() {
   const addRoute = async () => {
     if (!newRoute.name.trim() || !newRoute.address.trim()) return;
 
+    // Use selected coordinates if available (from map), otherwise default to Hyderabad offsets
+    // NOTE: In a real app we would geocode the address if map wasn't used.
+    // Here we assume if they typed it manually, we place it near Hyderabad center.
+    // If they used the map picker, newRoute should ideally have coords, but our state is simple.
+    // Let's rely on map visualization callback to set coords in the future.
+    // For now, default to Hyderabad to avoid ZERO_RESULTS (Ocean/Texas issue)
     const route: RouteStop = {
       id: `route-${Date.now()}`,
       name: newRoute.name,
       address: newRoute.address,
       coordinates: {
-        lat: 32.7767 + (routes.length * 0.01),
-        lng: -96.7970 + (routes.length * 0.01)
+        lat: 17.4455 + (routes.length * 0.01),
+        lng: 78.3751 + (routes.length * 0.01)
       },
       priority: routes.length + 1,
       estimatedBoxes: newRoute.estimatedBoxes
@@ -191,7 +228,6 @@ export default function NewWorkspacePage() {
     // Update route store as well
     try {
       if (typeof window !== 'undefined') {
-        //@ts-ignore
         const { setDeliveryStops } = useRouteStore.getState();
 
         const routeStops = updatedRoutes.map(r => ({
@@ -200,9 +236,21 @@ export default function NewWorkspacePage() {
           address: r.address,
           coordinates: r.coordinates,
           priority: r.priority,
-          estimatedDeliveryTime: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
+          warehouseId: 0,
+          warehouse: {
+            id: 0,
+            name: r.name,
+            address: r.address,
+            coordinates: r.coordinates,
+            capacity: 1000,
+            orderWarehouses: [],
+            deliveryRoutes: []
+          },
+          estimatedArrival: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
           boxCount: r.estimatedBoxes,
-          completed: false
+          completed: false,
+          order: r.priority,
+          isCompleted: false
         }));
 
         setDeliveryStops(routeStops);
@@ -230,9 +278,21 @@ export default function NewWorkspacePage() {
           address: r.address,
           coordinates: r.coordinates,
           priority: r.priority,
-          estimatedDeliveryTime: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
+          warehouseId: 0,
+          warehouse: {
+            id: 0,
+            name: r.name,
+            address: r.address,
+            coordinates: r.coordinates,
+            capacity: 1000,
+            orderWarehouses: [],
+            deliveryRoutes: []
+          },
+          estimatedArrival: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
           boxCount: r.estimatedBoxes,
-          completed: false
+          completed: false,
+          order: r.priority,
+          isCompleted: false
         }));
 
         setDeliveryStops(routeStops);
@@ -490,28 +550,38 @@ export default function NewWorkspacePage() {
 
                         <div>
                           <h4 className="font-medium mb-4">Add New Route</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Input
-                              placeholder="Stop name..."
-                              value={newRoute.name}
-                              onChange={(e) => setNewRoute({ ...newRoute, name: e.target.value })}
-                            />
-                            <div className="flex space-x-2">
-                              <Input
-                                placeholder="Address... (or select on map)"
-                                value={newRoute.address}
-                                onChange={(e) => setNewRoute({ ...newRoute, address: e.target.value })}
-                                className="flex-1"
-                              />
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setIsMapOpen(true)}
-                                title="Select location on map"
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Drop-off Location Selector */}
+                            <div className="flex flex-col space-y-1.5">
+                              <Select
+                                onValueChange={(value) => {
+                                  const selectedRetailer = REGISTERED_RETAILERS.find(r => r.id === value);
+                                  if (selectedRetailer) {
+                                    setNewRoute({
+                                      ...newRoute,
+                                      name: selectedRetailer.name,
+                                      address: selectedRetailer.address
+                                    });
+                                  }
+                                }}
                               >
-                                <MapPin className="h-4 w-4" />
-                              </Button>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Select drop-off location" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {REGISTERED_RETAILERS.map((retailer) => (
+                                    <SelectItem key={retailer.id} value={retailer.id}>
+                                      <div className="flex flex-col text-left">
+                                        <span className="font-medium">{retailer.name}</span>
+                                        <span className="text-xs text-muted-foreground">{retailer.address}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
+
+                            {/* Estimated Boxes & Add Button */}
                             <div className="flex space-x-2">
                               <Input
                                 type="number"
@@ -520,7 +590,70 @@ export default function NewWorkspacePage() {
                                 onChange={(e) => setNewRoute({ ...newRoute, estimatedBoxes: parseInt(e.target.value) || 0 })}
                                 className="flex-1"
                               />
-                              <Button onClick={addRoute} size="sm">
+                              <Button
+                                onClick={async () => {
+                                  if (!newRoute.name.trim()) return;
+
+                                  // Find the selected retailer to get accurate coordinates
+                                  const retailer = REGISTERED_RETAILERS.find(r => r.name === newRoute.name);
+                                  // Default to Hyderabad fallback if not found (though it should be)
+                                  const coords = retailer ? retailer.coordinates : {
+                                    lat: 17.4455 + (routes.length * 0.01),
+                                    lng: 78.3751 + (routes.length * 0.01)
+                                  };
+
+                                  const route: RouteStop = {
+                                    id: `route-${Date.now()}`,
+                                    name: newRoute.name,
+                                    address: newRoute.address,
+                                    coordinates: coords,
+                                    priority: routes.length + 1,
+                                    estimatedBoxes: newRoute.estimatedBoxes
+                                  };
+
+                                  const updatedRoutes = [...routes, route];
+                                  setRoutes(updatedRoutes);
+
+                                  // Update route store
+                                  try {
+                                    if (typeof window !== 'undefined') {
+                                      const { setDeliveryStops } = useRouteStore.getState();
+
+                                      const routeStops = updatedRoutes.map(r => ({
+                                        id: r.id,
+                                        name: r.name,
+                                        address: r.address,
+                                        coordinates: r.coordinates,
+                                        priority: r.priority,
+                                        warehouseId: 0,
+                                        warehouse: {
+                                          id: 0,
+                                          name: r.name,
+                                          address: r.address,
+                                          coordinates: r.coordinates,
+                                          capacity: 1000,
+                                          orderWarehouses: [],
+                                          deliveryRoutes: []
+                                        },
+                                        estimatedArrival: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
+                                        boxCount: r.estimatedBoxes,
+                                        completed: false,
+                                        order: r.priority,
+                                        isCompleted: false
+                                      }));
+
+                                      setDeliveryStops(routeStops);
+                                    }
+                                  } catch (err) {
+                                    console.error("Error updating route store:", err);
+                                  }
+
+                                  // Reset ONLY estimated boxes, keep the location empty/ready for next selection
+                                  setNewRoute({ name: "", address: "", estimatedBoxes: 0 });
+                                }}
+                                size="sm"
+                                disabled={!newRoute.name}
+                              >
                                 <Plus className="h-4 w-4" />
                               </Button>
                             </div>
@@ -634,7 +767,7 @@ export default function NewWorkspacePage() {
             </div>
 
             <div className="flex items-center space-x-6">
-              <PerformanceMonitor />
+
               <ScoreDisplay
                 stabilityScore={stabilityScore}
                 safetyScore={safetyScore}
@@ -665,6 +798,7 @@ export default function NewWorkspacePage() {
                       });
                       if (res.ok) {
                         // precise alert or toast
+                        alert("Workspace saved successfully");
                       } else {
                         console.warn("Server save failed");
                       }
@@ -686,11 +820,19 @@ export default function NewWorkspacePage() {
       <div className="flex h-[calc(100vh-88px)]">
         {/* sidebar */}
         <div
-          className={`${sidebarCollapsed ? "w-16" : "w-80"
-            } transition-all duration-300 bg-[#0f0f10]/50 backdrop-blur-sm flex flex-col border-r border-primary/20`}
+          style={{ width: sidebarCollapsed ? 64 : sidebarWidth }}
+          className={`relative transition-all duration-300 bg-[#0f0f10]/50 backdrop-blur-sm flex flex-col border-r border-primary/20 flex-shrink-0`}
         >
+          {/* Resize Handle */}
+          {!sidebarCollapsed && (
+            <div
+              className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 z-50 transition-colors"
+              onMouseDown={startResizing}
+            />
+          )}
+
           {/* collapse btn */}
-          <div className="p-4 border-b border-primary/30">
+          <div className="p-4 border-b border-primary/30 flex justify-between items-center">
             <Button
               variant="ghost"
               size="sm"

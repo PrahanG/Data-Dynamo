@@ -70,7 +70,7 @@ function Scene() {
 
       <CameraController />
 
-      <Environment preset="warehouse" />
+      <Environment preset="city" />
       <ambientLight intensity={0.3} />
       <directionalLight
         position={[15, 20, 10]}
@@ -226,7 +226,6 @@ export function TruckVisualization({ viewMode }: TruckVisualizationProps) {
             />
           </div>
 
-          <BoxControlPanel selectedBox={selectedBox} />
           <BoxTooltip hoveredBox={hoveredBox} />
 
           {deliveryStops.length > 0 && (
@@ -328,22 +327,7 @@ export function TruckVisualization({ viewMode }: TruckVisualizationProps) {
             <Stats className="!left-auto !right-0 !top-auto !bottom-0" />
           </Canvas>
 
-          {/* Optimize Button Overlay - Outside Canvas */}
-          <div className="absolute bottom-4 right-4 z-10">
-            <button
-              onClick={handleOptimize}
-              disabled={boxes.length === 0}
-              className={`
-                          px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg
-                          ${boxes.length === 0
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 hover:shadow-xl'
-                }
-                        `}
-            >
-              🚛 Optimize Layout ({boxes.length} boxes)
-            </button>
-          </div>
+
         </div>
       )}
 

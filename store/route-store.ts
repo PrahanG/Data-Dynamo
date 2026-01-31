@@ -32,20 +32,27 @@ interface RouteStore {
     reorderStop: (stopId: string, direction: 'up' | 'down') => void
     toggleStopCompletion: (stopId: string) => void
     getAvailableDestinations: () => string[]
+    setDeliveryStops: (stops: DeliveryStop[]) => void
 }
 
 export const useRouteStore = create<RouteStore>((set, get) => ({
     deliveryStops: [],
 
+    setDeliveryStops: (stops) => {
+        set({ deliveryStops: stops })
+        syncDestinationsWithRoute(stops)
+    },
+
     addDeliveryStop: (warehouse) => {
         const { deliveryStops } = get()
+
         const newStop: DeliveryStop = {
             id: `stop-${Date.now()}-${warehouse.id}`,
             warehouseId: warehouse.id,
             warehouse,
             order: deliveryStops.length + 1,
             isCompleted: false,
-            name: `Stop ${deliveryStops.length + 1}` // Simple format: "Stop 1", "Stop 2", etc.
+            name: warehouse.name || `Stop ${deliveryStops.length + 1}`
         }
         const updatedStops = [...deliveryStops, newStop]
         set({ deliveryStops: updatedStops })
@@ -61,8 +68,9 @@ export const useRouteStore = create<RouteStore>((set, get) => ({
             .filter(stop => stop.id !== stopId)
             .map((stop, index) => ({
                 ...stop,
-                order: index + 1,
-                name: `Stop ${index + 1}` // Simple format after reordering
+                order: index + 1
+                // Keep original name if possible, or update priority only if generic "Stop N" pattern was used
+                // For now, let's keep the name stable to avoid confusion, or optional re-indexing
             }))
 
         set({ deliveryStops: updated })
@@ -87,11 +95,10 @@ export const useRouteStore = create<RouteStore>((set, get) => ({
             // Swap stops
             ;[newStops[stopIndex], newStops[targetIndex]] = [newStops[targetIndex], newStops[stopIndex]]
 
-        // Update order numbers and names
+        // Update order numbers 
         const reorderedStops = newStops.map((stop, index) => ({
             ...stop,
-            order: index + 1,
-            name: `Stop ${index + 1}` // Simple format after reordering
+            order: index + 1
         }))
 
         set({ deliveryStops: reorderedStops })
@@ -141,6 +148,8 @@ export function initializeRouteStore(routes: any[]): boolean {
     try {
         if (!routes || routes.length === 0) {
             console.warn('No routes provided for initialization');
+            // Ensure empty state
+            useRouteStore.setState({ deliveryStops: [] });
             return false;
         }
 
@@ -167,7 +176,7 @@ export function initializeRouteStore(routes: any[]): boolean {
                 order: route.priority,
                 estimatedArrival: new Date(Date.now() + route.priority * 60 * 60 * 1000).toISOString(),
                 isCompleted: false,
-                name: `Stop ${route.priority}` // Use simple format
+                name: route.name || `Stop ${route.priority}` // Use Actual Name
             };
 
             // Add to store
@@ -200,12 +209,12 @@ export function getAvailableDestinations(): string[] {
     try {
         const { deliveryStops } = useRouteStore.getState();
         if (!deliveryStops || deliveryStops.length === 0) {
-            return ["Stop 1", "Stop 2", "Stop 3", "Stop 4"]; // Default fallback
+            return []; // Return empty if no stops to avoid confusing UI
         }
         return deliveryStops.map(stop => stop.name);
     } catch (error) {
         console.warn('Error getting destinations from route store:', error);
-        return ["Stop 1", "Stop 2", "Stop 3", "Stop 4"]; // Default fallback
+        return [];
     }
 }
 
@@ -220,36 +229,36 @@ export function ensureRouteStoreHasDefaults(): void {
             const defaultWarehouses: Warehouse[] = [
                 {
                     id: 1,
-                    name: "Distribution Center",
-                    address: "123 Main St, Dallas, TX",
-                    coordinates: { lat: 32.7767, lng: -96.7970 },
+                    name: "Stop 1: Hitech City",
+                    address: "Mindspace IT Park, Hitech City, Hyderabad, Telangana 500081",
+                    coordinates: { lat: 17.4455, lng: 78.3751 },
                     capacity: 10000,
                     orderWarehouses: [],
                     deliveryRoutes: []
                 },
                 {
                     id: 2,
-                    name: "Store #4532",
-                    address: "456 Oak Ave, Dallas, TX",
-                    coordinates: { lat: 32.7867, lng: -96.7870 },
+                    name: "Stop 2: Banjara Hills",
+                    address: "GVK One Mall, Rd Number 1, Banjara Hills, Hyderabad, Telangana 500034",
+                    coordinates: { lat: 17.4126, lng: 78.4390 },
                     capacity: 5000,
                     orderWarehouses: [],
                     deliveryRoutes: []
                 },
                 {
                     id: 3,
-                    name: "Store #2901",
-                    address: "789 Pine St, Dallas, TX",
-                    coordinates: { lat: 32.7967, lng: -96.7770 },
+                    name: "Stop 3: Uppal",
+                    address: "Uppal Metro Station, Uppal, Hyderabad, Telangana 500039",
+                    coordinates: { lat: 17.4018, lng: 78.5602 },
                     capacity: 5000,
                     orderWarehouses: [],
                     deliveryRoutes: []
                 },
                 {
                     id: 4,
-                    name: "Store #7834",
-                    address: "321 Elm Dr, Dallas, TX",
-                    coordinates: { lat: 32.8067, lng: -96.7670 },
+                    name: "Stop 4: Secunderabad",
+                    address: "Secunderabad Railway Station, Hyderabad, Telangana 500003",
+                    coordinates: { lat: 17.4399, lng: 78.4983 },
                     capacity: 5000,
                     orderWarehouses: [],
                     deliveryRoutes: []

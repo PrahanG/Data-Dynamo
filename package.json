@@ -11,6 +11,7 @@
   "dependencies": {
     "@dimforge/rapier3d": "^0.19.3",
     "@dimforge/rapier3d-compat": "^0.19.3",
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
     "@pmndrs/assets": "^1.7.0",
     "@prisma/client": "^7.2.0",

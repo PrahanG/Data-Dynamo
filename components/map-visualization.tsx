@@ -23,74 +23,18 @@ import {
   ToggleRight,
   Truck,
 } from "lucide-react"
+import { useRouteStore } from "@/store/route-store"
+import { REGISTERED_RETAILERS } from "@/data/registered-retailers"
 
 const warehouseLocation = {
   id: "warehouse",
-  name: "CargoVision Hub #6094",
-  address: "24555 Katy Freeway, Katy, TX 77494",
-  coordinates: { lat: 29.7604, lng: -95.689 },
+  name: "CargoVision Hub (RGIA)",
+  address: "Shamshabad, Hyderabad, Telangana 500409",
+  coordinates: { lat: 17.2403, lng: 78.4294 },
   type: "warehouse" as const,
 }
 
-// Sample store locations in Texas/Southwest region for realistic routing
-const walmartStorePool = [
-  {
-    id: "store_1",
-    name: "Retail Store #5260",
-    address: "2425 East Pioneer Parkway, Arlington, TX 76010",
-    coordinates: { lat: 32.7074, lng: -97.0682 },
-    placeId: "ChIJhRMHnlWZToYRqHKFOjAKXA8",
-  },
-  {
-    id: "walmart_2",
-    name: "Walmart Supercenter #1349",
-    address: "8555 Preston Road, Frisco, TX 75034",
-    coordinates: { lat: 33.129, lng: -96.8236 },
-    placeId: "ChIJN0nKjv3tTIYRoKqVOmQKrA0",
-  },
-  {
-    id: "walmart_3",
-    name: "Walmart Supercenter #3052",
-    address: "1405 East Belt Line Road, Richardson, TX 75081",
-    coordinates: { lat: 32.9581, lng: -96.6989 },
-    placeId: "ChIJ8b8HLvK7SIYRnQJVOkQHbN2",
-  },
-  {
-    id: "walmart_4",
-    name: "Walmart Supercenter #1329",
-    address: "13750 East Northwest Highway, Dallas, TX 75244",
-    coordinates: { lat: 32.9247, lng: -96.7702 },
-    placeId: "ChIJ7a5Hj6M7SIYRPLsVLmAWcK9",
-  },
-  {
-    id: "walmart_5",
-    name: "Walmart_Supercenter #1800",
-    address: "3500 Texas Highway 6, Sugar Land, TX 77478",
-    coordinates: { lat: 29.5997, lng: -95.6394 },
-    placeId: "ChIJQyFHdkW8QIYRtLsVKnAFcQ3",
-  },
-  {
-    id: "walmart_6",
-    name: "Walmart Supercenter #2705",
-    address: "1521 South Loop 336 West, Conroe, TX 77304",
-    coordinates: { lat: 30.2849, lng: -95.456 },
-    placeId: "ChIJRyHnfEW2QIYRqMsVJoAHdR8",
-  },
-  {
-    id: "walmart_7",
-    name: "Walmart Supercenter #3412",
-    address: "19720 Northwest Freeway, Houston, TX 77065",
-    coordinates: { lat: 29.8688, lng: -95.5643 },
-    placeId: "ChIJTyJnhEX3QIYRsNsVNoAIdU4",
-  },
-  {
-    id: "walmart_8",
-    name: "Walmart Supercenter #1002",
-    address: "500 Highway 6, Kemah, TX 77565",
-    coordinates: { lat: 29.543, lng: -95.0213 },
-    placeId: "ChIJUyKniEY4QIYRuOsVPoAJeW5",
-  },
-]
+// Sample store locations are imported from REGISTERED_RETAILERS
 
 // TypeScript interfaces for type safety
 interface WalmartLocation {
@@ -169,6 +113,24 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
   const [truckMarker, setTruckMarker] = useState<any | null>(null)
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null)
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null)
+
+  // Use Route Store for synchronization
+  const { deliveryStops } = useRouteStore()
+
+  // Sync delivery stops from store to map
+  useEffect(() => {
+    if (deliveryStops.length > 0) {
+      const mappedStores: WalmartLocation[] = deliveryStops.map(stop => ({
+        id: String(stop.id),
+        name: stop.name,
+        address: stop.warehouse.address,
+        coordinates: stop.warehouse.coordinates,
+        priority: stop.order
+      }));
+      setSelectedStores(mappedStores);
+      // We can also trigger marker updates here if needed, but the main useEffect for selectedStores should handle it
+    }
+  }, [deliveryStops])
 
   // Moving object state
   const [movingObjectMarker, setMovingObjectMarker] = useState<GoogleMapsMarker | null>(null)
@@ -381,13 +343,17 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
 
       // Initialize map centered on Texas region where warehouse and stores are located
       const mapInstance = new window.google.maps.Map(mapRef.current, {
-        zoom: 8,
-        center: warehouseLocation.coordinates, // Center on warehouse
+        zoom: 12, // Better starting zoom for city level
+        center: warehouseLocation.coordinates,
         styles: darkMapStyles,
         mapTypeControl: true,
         streetViewControl: true,
         fullscreenControl: true,
         zoomControl: true,
+        gestureHandling: 'cooperative', // Allows easier scrolling on page, ctrl+scroll to zoom
+        minZoom: 3, // Allow world view
+        maxZoom: 20, // Allow high detail
+        restriction: null, // Ensure no bounds restriction
         mapTypeControlOptions: {
           style: window.google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
           position: window.google.maps.ControlPosition.TOP_RIGHT,
@@ -398,6 +364,7 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
       const directionsServiceInstance = new window.google.maps.DirectionsService()
       const directionsRendererInstance = new window.google.maps.DirectionsRenderer({
         suppressMarkers: true, // We'll use custom markers
+        preserveViewport: true, // IMPORTANT: Don't restrict user from exploring map
         polylineOptions: {
           strokeColor: "#3b82f6", // Map primary color
           strokeWeight: 6,
@@ -649,6 +616,8 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
     }
   }, [])
 
+
+
   /**
    * Randomly select 4 Walmart stores from the pool
    * Updates selectedStores state and adds markers to map
@@ -678,7 +647,7 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
 
 
       // Randomly select 4 stores
-      const shuffled = [...walmartStorePool].sort(() => 0.5 - Math.random())
+      const shuffled = [...REGISTERED_RETAILERS].sort(() => 0.5 - Math.random())
       const selected = shuffled.slice(0, 4).map((store, index) => ({
         ...store,
         priority: index + 1,
@@ -881,6 +850,20 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
     }
   }, [directionsService, directionsRenderer, selectedStores, routeOptimizationEnabled, weatherData, addTruckMarker, addMovingObject, showMovingObject, animationIntervalId, movingObjectMarker, movingObjectPath])
 
+  /**
+   * Effect to update markers whenever selectedStores changes (e.g. from sync)
+   */
+  useEffect(() => {
+    if (selectedStores.length > 0 && map) {
+      // Debounce slightly to avoid flicker on init
+      const timer = setTimeout(() => {
+        addStoreMarkers(selectedStores);
+        calculateOptimalRoute(); // Auto-recalculate route when stops change
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedStores, map, addStoreMarkers, calculateOptimalRoute]);
+
 
   /**
    * Search for places using Google Places API
@@ -888,9 +871,28 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
    */
   const searchPlaces = useCallback(
     async (query: string) => {
-      if (!placesService || query.length < 3) {
-        setSearchResults([])
-        return
+      // 1. Search local Registered Retailers (always fast)
+      const queryLower = query.toLowerCase();
+      const localMatches = REGISTERED_RETAILERS.filter(retailer =>
+        retailer.name.toLowerCase().includes(queryLower) ||
+        retailer.address.toLowerCase().includes(queryLower)
+      ).map(r => ({
+        name: r.name,
+        formatted_address: r.address,
+        place_id: r.placeId,
+        geometry: {
+          location: {
+            lat: () => r.coordinates.lat,
+            lng: () => r.coordinates.lng,
+          }
+        },
+        isRegistered: true // Custom flag
+      }));
+
+      // If query is short, just show local matches if any, or nothing
+      if (query.length < 3) {
+        setSearchResults(localMatches);
+        return;
       }
 
       setIsSearching(true)
@@ -902,28 +904,27 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
           fields: ["name", "geometry", "formatted_address", "place_id"],
         }
 
+        // 2. Perform Google Search
         placesService.textSearch(request, (results: any, status: any) => {
+          let googleResults: any[] = [];
           if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-            setSearchResults(results.slice(0, 5))
-          } else {
-            setSearchResults([])
-            if (status !== window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-              setError({
-                type: "places",
-                message: "Search failed",
-                details: `Places API error: ${status}`,
-              })
-            }
+            googleResults = results.slice(0, 5);
           }
+
+          // 3. Merge Results: Local Matches First
+          setSearchResults([...localMatches, ...googleResults]);
+
+          if (localMatches.length === 0 && googleResults.length === 0 && status !== window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+            // Only set error if EVERYTHING failed
+            // But usually we just show empty
+          }
+
           setIsSearching(false)
         })
       } catch (error) {
         console.error("Search error:", error)
-        setError({
-          type: "places",
-          message: "Search failed",
-          details: error instanceof Error ? error.message : "Unknown search error",
-        })
+        // Fallback to local only on error
+        setSearchResults(localMatches);
         setIsSearching(false)
       }
     },
@@ -1103,62 +1104,12 @@ export default function MapVisualization({ onLocationSelect }: MapVisualizationP
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search for additional locations..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  searchPlaces(e.target.value)
-                }}
-                className="pl-10 bg-background border-border"
-              />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                {isSearching ? (
-                  <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4 text-primary" />
-                )}
-              </div>
-              {/* Search Results Dropdown */}
-              {searchResults.length > 0 && (
-                <Card className="absolute z-10 mt-2 w-full bg-card border-border">
-                  <CardContent className="p-2 max-h-60 overflow-y-auto">
-                    {searchResults.map((result, index) => (
-                      <div
-                        key={result.place_id || index}
-                        className="p-2 text-sm hover:bg-accent rounded cursor-pointer flex items-center space-x-2"
-                        onClick={() => addCustomLocation(result)}
-                      >
-                        <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
-                        <div className="flex-1">
-                          <div className="font-medium text-foreground truncate">{result.name}</div>
-                          <div className="text-xs text-muted-foreground">{result.formatted_address}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
             {/* Action Buttons */}
-            <div className="flex space-x-2">
-              <Button
-                onClick={selectRandomStores}
-                disabled={!isLoaded}
-                variant="outline"
-                className="flex-1 bg-transparent"
-              >
-                <Shuffle className="h-4 w-4 mr-2" />
-                New Route
-              </Button>
+            <div className="flex space-x-2 pt-2">
               <Button
                 onClick={calculateOptimalRoute}
                 disabled={!isLoaded || selectedStores.length === 0 || isCalculatingRoute}
-                className="flex-1"
+                className="w-full"
               >
                 {isCalculatingRoute ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

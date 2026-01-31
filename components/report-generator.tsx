@@ -7,7 +7,9 @@ import { useOptimizationStore } from "@/store/optimization-store"
 import { useWorkspaceStore } from "@/store/workspace-store"
 import { FileText, Download, ImageIcon, FileSpreadsheet } from "lucide-react"
 import { generatePDFReport } from "@/utils/pdf-generator"
+
 import { generate2DImages } from "@/utils/image-generator"
+import { Sparkles, Bot } from "lucide-react"
 
 export function ReportGenerator() {
   const { boxes, truckDimensions, stabilityScore, safetyScore, optimizationScore, loadingSequence, temperatureZones } =
@@ -15,6 +17,32 @@ export function ReportGenerator() {
   const { currentWorkspace } = useWorkspaceStore()
 
   const [isGenerating, setIsGenerating] = useState(false)
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+
+  const handleAnalyzeWithAI = async () => {
+    setIsAnalyzing(true)
+    try {
+      const response = await fetch("/api/ai-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          boxes,
+          truckDimensions,
+          scores: { stability: stabilityScore, safety: safetyScore, optimization: optimizationScore },
+          loadingSequence
+        })
+      })
+      const data = await response.json()
+      if (data.summary) {
+        setAiSummary(data.summary)
+      }
+    } catch (error) {
+      console.error("AI Analysis failed:", error)
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
 
   const handleGeneratePDFReport = async () => {
     setIsGenerating(true)
@@ -105,6 +133,7 @@ export function ReportGenerator() {
           }
         }).sort((a, b) => a.sequenceNumber - b.sequenceNumber), // Sort by loading sequence
         images,
+        aiSummary, // Pass the AI summary to the PDF generator
       }
 
       // Generate PDF
@@ -162,7 +191,7 @@ export function ReportGenerator() {
         instructions: box.isFragile ? "Handle with care - fragile item" : "Standard loading procedure",
         estimatedTime: "2-3 minutes",
       })),
-      unloadingGuide: ["Stop 4", "Stop 3", "Stop 2", "Stop 1"].map((stop) => ({
+      unloadingGuide: ["Secunderabad", "Uppal", "Banjara Hills", "Hitech City"].map((stop) => ({
         stop,
         boxes: boxes
           .filter((box) => box.destination === stop)
@@ -201,7 +230,7 @@ export function ReportGenerator() {
   // Helper functions for enhanced analytics
   const calculateCenterOfGravity = (boxes: any[]) => {
     if (boxes.length === 0) return { x: 0, y: 0, z: 0 }
-    
+
     const totalWeight = boxes.reduce((sum, box) => sum + box.weight, 0)
     return {
       x: (boxes.reduce((sum, box) => sum + box.position.x * box.weight, 0) / totalWeight).toFixed(2),
@@ -215,7 +244,7 @@ export function ReportGenerator() {
     const rearWeight = boxes.filter(box => box.position.z >= 0).reduce((sum, box) => sum + box.weight, 0)
     const leftWeight = boxes.filter(box => box.position.x < 0).reduce((sum, box) => sum + box.weight, 0)
     const rightWeight = boxes.filter(box => box.position.x >= 0).reduce((sum, box) => sum + box.weight, 0)
-    
+
     return {
       front: `${frontWeight} lbs`,
       rear: `${rearWeight} lbs`,
@@ -231,7 +260,7 @@ export function ReportGenerator() {
     const highBoxes = boxes.filter(box => box.position.y > truckDimensions.height * 0.6).length
     const fragileBoxes = boxes.filter(box => box.isFragile).length
     const heavyBoxes = boxes.filter(box => box.weight > 500).length
-    
+
     return {
       totalWeight: `${totalWeight} lbs`,
       weightCapacityUsed: `${((totalWeight / 34000) * 100).toFixed(1)}%`,
@@ -254,12 +283,34 @@ export function ReportGenerator() {
         <CardContent className="space-y-3">
           <Button
             onClick={handleGeneratePDFReport}
-            className="w-full h-8 text-xs"
+            className="w-30 h-8 text-xs"
             disabled={isGenerating || boxes.length === 0}
           >
             <Download className="h-3 w-3 mr-1" />
-            {isGenerating ? "Generating PDF..." : "Generate Comprehensive PDF Report"}
+            {isGenerating ? "Generating PDF..." : "Generate PDF Report"}
           </Button>
+
+          {!aiSummary ? (
+            <Button
+              onClick={handleAnalyzeWithAI}
+              variant="secondary"
+              className="w-full h-8 text-xs bg-indigo-900/50 hover:bg-indigo-900 border border-indigo-500/30 text-indigo-300"
+              disabled={isAnalyzing || boxes.length === 0}
+            >
+              <Bot className="h-3 w-3 mr-1" />
+              {isAnalyzing ? "Analyzing..." : "Generate AI Supervisor Summary"}
+            </Button>
+          ) : (
+            <div className="bg-indigo-900/20 border border-indigo-500/30 rounded p-3">
+              <div className="flex items-center text-indigo-400 mb-2">
+                <Sparkles className="h-3 w-3 mr-1" />
+                <span className="text-xs font-bold">AI Supervisor Insight</span>
+              </div>
+              <p className="text-xs text-indigo-200 leading-relaxed italic">
+                "{aiSummary}"
+              </p>
+            </div>
+          )}
 
           <Button
             onClick={handleExport2DImages}

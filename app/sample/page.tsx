@@ -78,16 +78,16 @@ interface TruckConfig {
 // Demo configuration templates
 const DEMO_SCENARIOS = {
     "walmart-delivery": {
-        name: "Walmart Multi-Stop Delivery",
+        name: "Hyderabad Retail Distribution",
         description: "150 diverse items across 4 temperature zones",
         boxCount: 150,
         temperatureZones: ["regular", "cold", "frozen"],
         truckConfig: { width: 8, length: 28, height: 9, maxWeight: 34000 },
         defaultRoutes: [
-            { name: "Distribution Center", address: "123 Main St, Dallas, TX", priority: 1, estimatedBoxes: 0 },
-            { name: "Store #4532", address: "456 Oak Ave, Dallas, TX", priority: 2, estimatedBoxes: 45 },
-            { name: "Store #2901", address: "789 Pine St, Dallas, TX", priority: 3, estimatedBoxes: 55 },
-            { name: "Store #7834", address: "321 Elm Dr, Dallas, TX", priority: 4, estimatedBoxes: 50 }
+            { name: "Manikonda Hub", address: "Lanco Hills, Manikonda, Hyderabad, TS", priority: 1, estimatedBoxes: 0 },
+            { name: "Supermart Hitech", address: "Hitech City Main Rd, Hyderabad, TS", priority: 2, estimatedBoxes: 45 },
+            { name: "Ratnadeep Gachibowli", address: "Gachibowli, Hyderabad, TS", priority: 3, estimatedBoxes: 55 },
+            { name: "Vijetha Kondapur", address: "Kondapur, Hyderabad, TS", priority: 4, estimatedBoxes: 50 }
         ]
     },
     "electronics-fragile": {
@@ -97,10 +97,10 @@ const DEMO_SCENARIOS = {
         temperatureZones: ["regular"],
         truckConfig: { width: 8, length: 24, height: 8, maxWeight: 25000 },
         defaultRoutes: [
-            { name: "Electronics Warehouse", address: "100 Tech Blvd, Austin, TX", priority: 1, estimatedBoxes: 0 },
-            { name: "Best Buy #432", address: "200 Consumer Way, Austin, TX", priority: 2, estimatedBoxes: 15 },
-            { name: "Apple Store", address: "300 Innovation Dr, Austin, TX", priority: 3, estimatedBoxes: 12 },
-            { name: "GameStop #891", address: "400 Gaming St, Austin, TX", priority: 4, estimatedBoxes: 8 }
+            { name: "Electronics Warehouse", address: "Kompally, Hyderabad, TS", priority: 1, estimatedBoxes: 0 },
+            { name: "Bajaj Electronics", address: "Punjagutta, Hyderabad, TS", priority: 2, estimatedBoxes: 15 },
+            { name: "Reliance Digital", address: "Madhapur, Hyderabad, TS", priority: 3, estimatedBoxes: 12 },
+            { name: "Croma Jubilee", address: "Jubilee Hills, Hyderabad, TS", priority: 4, estimatedBoxes: 8 }
         ]
     },
     "mixed-temperature": {
@@ -110,10 +110,10 @@ const DEMO_SCENARIOS = {
         temperatureZones: ["regular", "cold", "frozen"],
         truckConfig: { width: 8.5, length: 26, height: 9, maxWeight: 30000 },
         defaultRoutes: [
-            { name: "Food Distribution Hub", address: "500 Cold Chain Ave, Houston, TX", priority: 1, estimatedBoxes: 0 },
-            { name: "Grocery Hub", address: "600 Fresh Market St, Houston, TX", priority: 2, estimatedBoxes: 35 },
-            { name: "Restaurant Supply", address: "700 Chef's Way, Houston, TX", priority: 3, estimatedBoxes: 30 },
-            { name: "Convenience Store", address: "800 Quick Stop Ln, Houston, TX", priority: 4, estimatedBoxes: 20 }
+            { name: "Cold Chain Hub", address: "Shamshabad, Hyderabad, TS", priority: 1, estimatedBoxes: 0 },
+            { name: "Fresh Market", address: "Attapur, Hyderabad, TS", priority: 2, estimatedBoxes: 35 },
+            { name: "Restaurant Supply", address: "Mehdipatnam, Hyderabad, TS", priority: 3, estimatedBoxes: 30 },
+            { name: "Quick Stop", address: "Tolichowki, Hyderabad, TS", priority: 4, estimatedBoxes: 20 }
         ]
     }
 };
@@ -200,7 +200,7 @@ export default function SamplePage() {
                 id: `route-${index}`,
                 name: route.name,
                 address: route.address,
-                coordinates: { lat: 32.7767 + (index * 0.01), lng: -96.7970 + (index * 0.01) },
+                coordinates: { lat: 17.4455 + (index * 0.02), lng: 78.3751 + (index * 0.02) },
                 priority: route.priority,
                 estimatedBoxes: route.estimatedBoxes
             }));
@@ -237,8 +237,8 @@ export default function SamplePage() {
             name: newRoute.name,
             address: newRoute.address,
             coordinates: {
-                lat: 32.7767 + (routes.length * 0.01),
-                lng: -96.7970 + (routes.length * 0.01)
+                lat: 17.4455 + (routes.length * 0.01),
+                lng: 78.3751 + (routes.length * 0.01)
             },
             priority: routes.length + 1,
             estimatedBoxes: newRoute.estimatedBoxes
@@ -259,9 +259,21 @@ export default function SamplePage() {
                     address: r.address,
                     coordinates: r.coordinates,
                     priority: r.priority,
-                    estimatedDeliveryTime: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
+                    warehouseId: 0,
+                    warehouse: {
+                        id: 0,
+                        name: r.name,
+                        address: r.address,
+                        coordinates: r.coordinates,
+                        capacity: 1000,
+                        orderWarehouses: [],
+                        deliveryRoutes: []
+                    },
+                    estimatedArrival: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
                     boxCount: r.estimatedBoxes,
-                    completed: false
+                    completed: false,
+                    order: r.priority,
+                    isCompleted: false
                 }));
 
                 setDeliveryStops(routeStops);
@@ -289,9 +301,21 @@ export default function SamplePage() {
                     address: r.address,
                     coordinates: r.coordinates,
                     priority: r.priority,
-                    estimatedDeliveryTime: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
+                    warehouseId: 0,
+                    warehouse: {
+                        id: 0,
+                        name: r.name,
+                        address: r.address,
+                        coordinates: r.coordinates,
+                        capacity: 1000,
+                        orderWarehouses: [],
+                        deliveryRoutes: []
+                    },
+                    estimatedArrival: new Date(Date.now() + r.priority * 60 * 60 * 1000).toISOString(),
                     boxCount: r.estimatedBoxes,
-                    completed: false
+                    completed: false,
+                    order: r.priority,
+                    isCompleted: false
                 }));
 
                 setDeliveryStops(routeStops);
@@ -756,7 +780,7 @@ export default function SamplePage() {
                                 </div>
                             </div>
 
-                            <PerformanceMonitor />
+
 
                             <ScoreDisplay
                                 stabilityScore={stabilityScore}

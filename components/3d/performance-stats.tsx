@@ -50,20 +50,6 @@ export function PerformanceStats() {
                     Physics: {isSimulationRunning ? "ACTIVE" : "IDLE"}
                 </div>
                 <div className="text-gray-400">WebGL 2.0</div>
-
-                <button
-                    onClick={handleOptimize}
-                    disabled={boxes.length === 0}
-                    className={`
-                      mt-2 px-3 py-1 rounded text-xs font-medium transition-all duration-200
-                      ${boxes.length === 0
-                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
-                        }
-                    `}
-                >
-                    Optimize ({boxes.length})
-                </button>
             </div>
         </Html>
     )

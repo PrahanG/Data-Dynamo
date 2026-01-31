@@ -431,6 +431,14 @@ export async function generateTemplateBasedPDF_V1(reportData: any, templateDataP
 
       content: [
         { text: 'Executive Dashboard', style: 'sectionHeader', margin: [0, 0, 0, 20] },
+        // Insert AI summary stack if it exists.
+        ...(reportData.aiSummary ? [{
+          stack: [
+            { text: 'AI SUPERVISOR INSIGHT', fontSize: 9, bold: true, color: COLORS.secondary, margin: [0, 0, 0, 4] },
+            { text: reportData.aiSummary, fontSize: 11, italics: true, color: COLORS.dark, background: '#F3E8FF', margin: [0, 0, 0, 10] }
+          ],
+          margin: [0, 0, 0, 10]
+        }] : []),
         {
           columns: [
             { width: '*', ...createMetricCard('Total Boxes', `${safeReportData.loadingPlan.totalBoxes}`, COLORS.primary) },

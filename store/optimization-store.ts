@@ -391,15 +391,11 @@ export const useOptimizationStore = create<OptimizationState>((set, get) => ({
   },
 
   setTruckDimensions: (dimensions) => {
-    set((state) => {
-      const scores = calculateAllScores(state.boxes, dimensions)
-      return {
-        truckDimensions: dimensions,
-        stabilityScore: scores.stability,
-        safetyScore: scores.safety,
-        optimizationScore: scores.optimization,
-      }
-    })
+    set({ truckDimensions: dimensions })
+    // Automatically re-optimize layout to fit new dimensions
+    setTimeout(() => {
+      get().optimizeLayout();
+    }, 0);
   },
 
   setPhysicsEnabled: (enabled) => {
@@ -1288,7 +1284,8 @@ function isBoxColliding(box1: Box | PackableBox, box2: Box | PackableBox): boole
   const yOverlap = Math.max(0, Math.min(box1.position.y + box1.height / 2, box2.position.y + box2.height / 2) - Math.max(box1.position.y - box1.height / 2, box2.position.y - box2.height / 2));
   const zOverlap = Math.max(0, Math.min(box1.position.z + box1.length / 2, box2.position.z + box2.length / 2) - Math.max(box1.position.z - box1.length / 2, box2.position.z - box2.length / 2));
 
-  return xOverlap > 0 && yOverlap > 0 && zOverlap > 0;
+  const TOLERANCE = 0.005; // 5mm tolerance for touching boxes
+  return xOverlap > TOLERANCE && yOverlap > TOLERANCE && zOverlap > TOLERANCE;
 }
 
 
@@ -1388,9 +1385,9 @@ function getTemperatureZoneScore(
 
 function generateOptimalLoadingSequence(boxes: Box[]): Box[] {
   const sorted = [...boxes].sort((a, b) => {
-    const stopOrder = { "Stop 4": 0, "Stop 3": 1, "Stop 2": 2, "Stop 1": 3 };
-    const aStop = stopOrder[a.destination as keyof typeof stopOrder] || 4;
-    const bStop = stopOrder[b.destination as keyof typeof stopOrder] || 4;
+    const stopOrder = { "Secunderabad": 0, "Uppal": 1, "Banjara Hills": 2, "Hitech City": 3 };
+    const aStop = stopOrder[a.destination as keyof typeof stopOrder] ?? 4;
+    const bStop = stopOrder[b.destination as keyof typeof stopOrder] ?? 4;
 
     if (aStop !== bStop) return aStop - bStop;
     if (a.isFragile && !b.isFragile) return 1;

@@ -14,14 +14,6 @@ export default function LoginPage() {
   const router = useRouter()
   const [retailLoginData, setRetailLoginData] = useState({ retailId: "", password: "" })
   const [warehouseLoginData, setWarehouseLoginData] = useState({ username: "", password: "" })
-  const [signupData, setSignupData] = useState({
-    shopName: "",
-    retailId: "",
-    password: "",
-    confirmPassword: "",
-    address: "",
-    phone: "",
-  })
   const [errorMessage, setErrorMessage] = useState("")
 
   const handleRetailLogin = (e: React.FormEvent) => {
@@ -55,28 +47,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault()
-    setErrorMessage("")
-
-    if (signupData.password !== signupData.confirmPassword) {
-      setErrorMessage("Passwords do not match!")
-      return
-    }
-
-    if (signupData.shopName && signupData.retailId) {
-      localStorage.setItem(
-        "currentRetail",
-        JSON.stringify({
-          id: signupData.retailId,
-          name: signupData.shopName,
-        }),
-      )
-      // Redirect to /retailer instead of non-existent /dashboard
-      router.push("/retailer")
-    }
-  }
-
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
@@ -96,15 +66,12 @@ export default function LoginPage() {
         </div>
 
         <Tabs defaultValue="retail-login" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-zinc-900 border border-zinc-800">
+          <TabsList className="grid w-full grid-cols-2 bg-zinc-900 border border-zinc-800">
             <TabsTrigger value="retail-login" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400">
               Retail
             </TabsTrigger>
             <TabsTrigger value="warehouse-login" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400">
               Warehouse
-            </TabsTrigger>
-            <TabsTrigger value="signup" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400">
-              New Shop
             </TabsTrigger>
           </TabsList>
 
@@ -195,103 +162,6 @@ export default function LoginPage() {
                   <div className="text-xs text-zinc-500 text-center mt-4 bg-zinc-950 p-2 rounded border border-zinc-800">
                     Demo: warehouse_admin / warehouse
                   </div>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="signup" className="mt-4">
-            <Card className="bg-zinc-900 border-zinc-800 shadow-none">
-              <CardHeader>
-                <CardTitle className="text-white">New Retail Account</CardTitle>
-                <CardDescription className="text-zinc-400">
-                  Register your shop
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="shopName" className="text-zinc-300">Shop Name</Label>
-                      <Input
-                        id="shopName"
-                        placeholder="Shop Name"
-                        value={signupData.shopName}
-                        onChange={(e) => setSignupData({ ...signupData, shopName: e.target.value })}
-                        className="bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:ring-green-500"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="newRetailId" className="text-zinc-300">Retail ID</Label>
-                      <Input
-                        id="newRetailId"
-                        placeholder="Retail ID"
-                        value={signupData.retailId}
-                        onChange={(e) => setSignupData({ ...signupData, retailId: e.target.value })}
-                        className="bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:ring-green-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="address" className="text-zinc-300">Address</Label>
-                    <Input
-                      id="address"
-                      placeholder="Address"
-                      value={signupData.address}
-                      onChange={(e) => setSignupData({ ...signupData, address: e.target.value })}
-                      className="bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:ring-green-500"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-zinc-300">Phone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="Phone"
-                      value={signupData.phone}
-                      onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                      className="bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:ring-green-500"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword" className="text-zinc-300">Password</Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        placeholder="Password"
-                        value={signupData.password}
-                        onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                        className="bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:ring-green-500"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-zinc-300">Confirm</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="Confirm"
-                        value={signupData.confirmPassword}
-                        onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                        className="bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:ring-green-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {errorMessage && <p className="text-red-400 text-sm">{errorMessage}</p>}
-
-                  <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white">
-                    Create Account
-                  </Button>
                 </form>
               </CardContent>
             </Card>

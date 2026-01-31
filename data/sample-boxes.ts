@@ -9,14 +9,14 @@ import type { Box } from "@/types/box";
 
 // Demo destination mapping for realistic scenarios
 export const DEMO_DESTINATIONS = {
-  walmart: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"],
-  electronics: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"],
-  grocery: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"],
-  general: ["Stop 1", "Stop 2", "Stop 3", "Stop 4"]
+  walmart: ["Hitech City", "Banjara Hills", "Uppal", "Secunderabad"],
+  electronics: ["Hitech City", "Banjara Hills", "Uppal", "Secunderabad"],
+  grocery: ["Hitech City", "Banjara Hills", "Uppal", "Secunderabad"],
+  general: ["Hitech City", "Banjara Hills", "Uppal", "Secunderabad"]
 };
 
 const getRandomDestination = () => {
-  const destinations = ["Stop 1", "Stop 2", "Stop 3", "Stop 4"];
+  const destinations = ["Hitech City", "Banjara Hills", "Uppal", "Secunderabad"];
   return destinations[Math.floor(Math.random() * destinations.length)];
 };
 
@@ -172,7 +172,7 @@ export function validateBoxData(box: Partial<Box>): string[] {
 }
 
 // Function to generate dynamic sample boxes based on current routes
-export function generateDynamicSampleBoxes(routeNames: string[] = ["Stop 1", "Stop 2", "Stop 3", "Stop 4"], count: number = 200): Box[] {
+export function generateDynamicSampleBoxes(routeNames: string[] = ["Hitech City", "Banjara Hills", "Uppal", "Secunderabad"], count: number = 200): Box[] {
   const temperatureZones = ["regular", "cold", "frozen"] as const;
 
   return Array.from({ length: count }, (_, i) => {
