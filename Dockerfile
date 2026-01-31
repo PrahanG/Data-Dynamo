@@ -11,7 +11,7 @@ COPY package*.json ./
 RUN rm -rf node_modules package-lock.json && \
     npm cache clean --force
 
-# Copy all source files
+# Copy all source files 
 COPY . .
 
 # Install dependencies
